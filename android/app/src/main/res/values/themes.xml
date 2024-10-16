@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Marusys" parent="android:Theme.Material.Light.NoActionBar" />
+<style name="Theme.Marusys.Splash" parent="Theme.SplashScreen">
+    <item name="windowSplashScreenBackground">@color/purple_200</item>
+<!--    <item name="windowSplashScreenAnimatedIcon">@color/purple_500</item>-->
+</style>
+</resources>
