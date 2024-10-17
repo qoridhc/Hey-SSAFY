@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavController
+import com.ssafy.marusys.presentation.components.ProbabilitiesList
 import com.ssafy.marusys.presentation.viewmodel.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,6 +23,7 @@ fun PermissionsScreen(viewModel: HomeViewModel) {
 
     Column {
         Text(text = "퍼미션 페이지")
+        ProbabilitiesList(viewModel = viewModel)
         Button(onClick = {
             viewModel.openBottomSheet()
         }) {

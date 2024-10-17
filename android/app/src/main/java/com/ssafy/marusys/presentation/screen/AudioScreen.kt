@@ -63,7 +63,13 @@ import com.ssafy.marusys.presentation.viewmodel.HomeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
+import org.tensorflow.lite.support.label.Category
 import kotlin.math.round
+
+interface AudioClassificationListener {
+    fun onError(error: String)
+    fun onResult(results: List<Category>, inferenceTime: Long)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -463,14 +469,14 @@ fun ThreadsSelector(
         }
     }
 }
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview
-@Composable
-fun SimpleComposablePreview() {
-    val sheetState = rememberModalBottomSheetState()
-    val viewModel =  HomeViewModel()
-    val selectedModel = ""
-    val onModelSelected: (String) -> Unit = { text -> print(text) }
-    AudioScreen(sheetState, viewModel, selectedModel, {onModelSelected("hi")})
-
-}
+//@OptIn(ExperimentalMaterial3Api::class)
+//@Preview
+//@Composable
+//fun SimpleComposablePreview() {
+//    val sheetState = rememberModalBottomSheetState()
+//    val viewModel =  HomeViewModel()
+//    val selectedModel = ""
+//    val onModelSelected: (String) -> Unit = { text -> print(text) }
+//    AudioScreen(sheetState, viewModel, selectedModel, {onModelSelected("hi")})
+//
+//}
