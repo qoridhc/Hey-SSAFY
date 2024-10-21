@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.marusys.common.R
+import com.ssafy.marusys.AudioClassificationHelper
 import com.ssafy.marusys.presentation.viewmodel.HomeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -79,6 +80,8 @@ fun AudioScreen(
     selectedModel: String,
     onModelSelected: (String) -> Unit
 ) {
+    private val adapter by lazy { ProbabilitiesAdapter() }
+    lateinit var audioHelper: AudioClassificationHelper
     ModalBottomSheet(
         modifier = Modifier
             .fillMaxHeight(),
