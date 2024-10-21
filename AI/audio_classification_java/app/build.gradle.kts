@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -28,12 +30,34 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+//        kotlinCompilerExtensionVersion '1.3.2'
+    }
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.12"
+    }
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
 }
-
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose_compiler")
+    stabilityConfigurationFile = rootProject.layout.projectDirectory.file("stability_config.conf")
+}
 dependencies {
+    // Compose
+    implementation(platform(libs.compose.bom))
+    implementation(libs.ui.android)
+    androidTestImplementation(platform(libs.compose.bom))
+    implementation(libs.runtime)
+    implementation(libs.core.ktx)
+    implementation(libs.activity.compose)
+    implementation(libs.material3)
+    implementation(libs.accompanist.themeadapter.material3)
 
-
+    debugImplementation("androidx.compose.ui:ui-tooling")
     // 텐서플로 의존성
     implementation("org.tensorflow:tensorflow-lite:2.10.0")
     implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.10.0")
