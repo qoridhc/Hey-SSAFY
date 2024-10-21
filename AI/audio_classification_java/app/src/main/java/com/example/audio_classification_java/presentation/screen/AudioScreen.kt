@@ -34,17 +34,21 @@ import com.example.audio_classification_java.presentation.viewmodel.MainViewMode
 
 @Composable
 fun AudioScreen(
+    // 인자의 타입 지정
     viewModel: MainViewModel,
     recordButtons: () -> Unit
 ) {
     val resultText by viewModel.resultText.collectAsState()
     val context = LocalContext.current
     val activity = context as ComponentActivity
+    // Column : 세로 div
     Column(
+        // modifier : css 주는 것
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("모델 테스트 하기", style = MaterialTheme.typography.headlineLarge)
+        // Spacer : 빈 공간 두는 것
         Spacer(modifier = Modifier.padding(16.dp))
         Button(
             // 버튼 클릭 리스너 설정 -> 버튼 클릭 시 작동
