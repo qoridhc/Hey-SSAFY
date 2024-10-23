@@ -1,11 +1,16 @@
 package com.example.audio_classification_java
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.speech.RecognizerIntent
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
@@ -51,6 +56,15 @@ class MainActivity : ComponentActivity() {
                 1
             )
         }
+
+        // 권한 2
+//        requestOverlayPermission()
+        val intent = Intent(this, AudioService::class.java)
+        startService(intent)
+//        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+//        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)    // 여분의 키
+//        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")         // 언어 설정
+
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
@@ -191,7 +205,13 @@ class MainActivity : ComponentActivity() {
             }
         }).start()
     } // ======== wav 파일 기반 분류 ========
-    //    public void classifyWavFile(String fileName) throws IOException {
+    // 오버레이 권한 요청
+    private fun requestOverlayPermission() {
+        val myIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+        myIntent.data = Uri.parse("package:$packageName")
+        startActivityForResult(myIntent, 200)
+    }
+//    public void classifyWavFile(String fileName) throws IOException {
     //        float[] audioData = readWavFile(fileName);
     //
     //        // 데이터 길이가 16000인지 확인하고 필요시 조정

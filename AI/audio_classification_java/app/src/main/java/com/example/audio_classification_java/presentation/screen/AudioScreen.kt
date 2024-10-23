@@ -24,13 +24,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
+import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.audio_classification_java.R
 import com.example.audio_classification_java.presentation.viewmodel.MainViewModel
+import androidx.compose.runtime.LaunchedEffect
+
 
 @Composable
 fun AudioScreen(
@@ -41,6 +45,9 @@ fun AudioScreen(
     val resultText by viewModel.resultText.collectAsState()
     val context = LocalContext.current
     val activity = context as ComponentActivity
+//    LaunchedEffect(resultText) {
+//        recordButtons()
+//    }
     // Column : 세로 div
     Column(
         // modifier : css 주는 것
