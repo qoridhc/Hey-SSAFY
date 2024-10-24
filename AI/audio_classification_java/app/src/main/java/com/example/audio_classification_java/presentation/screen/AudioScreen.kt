@@ -2,6 +2,7 @@ package com.example.audio_classification_java.presentation.screen
 
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
@@ -40,9 +41,11 @@ import androidx.compose.runtime.LaunchedEffect
 fun AudioScreen(
     // 인자의 타입 지정
     viewModel: MainViewModel,
-    recordButtons: () -> Unit
+    recordButtons: () -> Unit,
+    startService: () -> Unit,
 ) {
     val resultText by viewModel.resultText.collectAsState()
+    val errorText by viewModel.errorText.collectAsState()
     val context = LocalContext.current
     val activity = context as ComponentActivity
 //    LaunchedEffect(resultText) {
@@ -59,7 +62,8 @@ fun AudioScreen(
         Spacer(modifier = Modifier.padding(16.dp))
         Button(
             // 버튼 클릭 리스너 설정 -> 버튼 클릭 시 작동
-            onClick = { recordButtons() },
+//            onClick = { recordButtons() },
+            onClick = { startService() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -70,6 +74,7 @@ fun AudioScreen(
         }
         Spacer(modifier = Modifier.padding(16.dp))
         Text(resultText, modifier = Modifier.weight(1f), fontSize = 32.sp)
+        Spacer(modifier = Modifier.padding(16.dp))
+        Text(errorText, modifier = Modifier.weight(1f), fontSize = 32.sp)
     }
-
 }

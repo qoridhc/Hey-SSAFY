@@ -11,4 +11,11 @@ class MainViewModel() : ViewModel() {
     fun setResultText(text : String){
         _resultText.value = text
     }
+
+    private val _errorText = MutableStateFlow("")
+    val errorText = _errorText.asStateFlow()
+
+    fun setErrorText(text : String){
+        _errorText.value = text
+    }
 }

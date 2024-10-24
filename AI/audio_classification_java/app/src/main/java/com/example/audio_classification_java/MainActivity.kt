@@ -1,7 +1,10 @@
 package com.example.audio_classification_java
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -21,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.example.audio_classification_java.presentation.screen.AudioScreen
 import com.example.audio_classification_java.presentation.viewmodel.MainViewModel
 import kotlin.math.exp
@@ -40,7 +44,14 @@ class MainActivity : ComponentActivity() {
         "up",
         "yes"
     )
-
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "SPEECH_RECOGNITION_RESULT") {
+                val matches = intent.getStringArrayListExtra("matches")
+                mainViewModel.setResultText(matches?.firstOrNull() ?: "")
+            }
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 오디오 녹음 권한이 있는지 확인
@@ -59,20 +70,28 @@ class MainActivity : ComponentActivity() {
 
         // 권한 2
 //        requestOverlayPermission()
+
         val intent = Intent(this, AudioService::class.java)
         startService(intent)
 //        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
 //        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)    // 여분의 키
 //        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")         // 언어 설정
-
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            receiver,
+            IntentFilter("SPEECH_RECOGNITION_RESULT")
+        )
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
-                recordButtons = {recordAndClassify()}
+                recordButtons = {recordAndClassify()},
+                startService = {startService(intent)},
             )
         }
     }
-
+    override fun onDestroy() {
+        super.onDestroy()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
+    }
     // ======== 음성 인식 기반 분류 ========
     // 현재는 버튼 리스너 기반 -> 추후에 실시간 음성인식 코드 구현
     fun recordAndClassify() {
