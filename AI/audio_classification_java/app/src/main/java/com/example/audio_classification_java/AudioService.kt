@@ -8,8 +8,8 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.example.audio_classification_java.presentation.viewmodel.MainViewModel
 
 class AudioService : Service() {
     private lateinit var speechRecognizer: SpeechRecognizer
@@ -21,56 +21,46 @@ class AudioService : Service() {
             override fun onReadyForSpeech(params: Bundle?) {}
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {
-//                 Log.d("sound","$rmsdB");
               //입력되는 데시벨 크기를 상수로
+//                 Log.d("sound","$rmsdB");
             }
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
                 // 오류 발생 시 다시 시작
-                val message = when (error) {
-                    SpeechRecognizer.ERROR_AUDIO -> "오디오 에러"
-                    SpeechRecognizer.ERROR_CLIENT -> "클라이언트 에러"
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "퍼미션 없음"
-                    SpeechRecognizer.ERROR_NETWORK -> "네트워크 에러"
-                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "네트웍 타임아웃"
-                    SpeechRecognizer.ERROR_NO_MATCH -> "찾을 수 없음"
-                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "RECOGNIZER 가 바쁨"
-                    SpeechRecognizer.ERROR_SERVER -> "서버가 이상함"
-                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "말하는 시간초과"
-                    else -> "알 수 없는 오류임"
-                }
-//                viewModel.setErrorText(message)
+                Toast.makeText(this@AudioService, "오류가 발생했습니다", Toast.LENGTH_SHORT).show()
                 startListening()
             }
+            // 결과 처리
             override fun onResults(results: Bundle?) {
+                // 결과 인식을 matches로 저장
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                // SPEECH_RECOGNITION_RESULT라는 이름의 intent 생성
                 val intent = Intent("SPEECH_RECOGNITION_RESULT")
+                // 해당 intent에 matches라는 이름의 matches 결과 배열 리스트를 넣어둠
                 intent.putStringArrayListExtra("matches", matches)
+                // matches의 값 확인하는 로그
+                Log.e("11111111111111111", "$matches")
+                // LocalBroadcastManager는 안드로이드에서 앱 내부의 컴포넌트 간 통신을 위해 사용되는 클래스
+                // 일반 BroadcastManager와 달리, LocalBroadcastManager는 앱 내부에서만 작동하므로 보안성이 높고 효율적입니다
+                // AudioService의 context에서 instance를 가져와서 intent에 넣고 다른 곳에서 사용할 수 있게 띄운다.
                 LocalBroadcastManager.getInstance(this@AudioService).sendBroadcast(intent)
+                startListening() // 결과 처리 후 다시 시작
             }
-//            override fun onResults(results: Bundle?) {
-//                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-//                // 결과 처리
-//                val rs: Array<String> = matches?.let { Array(it.size) { "" } } ?: emptyArray()
-//                matches?.toArray(rs);
-//                Log.e("","11111111111111111111111 $matches")
-//              //rs에 인식된 결과 값이 들어가 있다.
-//                viewModel.setResultText("1 $matches")
-////                startListening() // 결과 처리 후 다시 시작
-//            }
             override fun onPartialResults(partialResults: Bundle?) {}
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
-
+        // 음성 인식을 위한 Intent를 설정하는 '준비' 과정
+        // apply를 통해 추가 정보를 설정하는 것
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            // Free_FORM : 언어 모델이 자유 형식의 음성을 인식하도록 지정-> 일반적인 대화나 다양한 주제의 음성을 인식하는 데 적합
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            // 서비스를 호출하는 앱 패키지 이름을 지정 -> 인식 결과를 올바른 앱으로 반환
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
         }
-
         startListening()
     }
-
+    // 인식 시작하기
     private fun startListening() {
         speechRecognizer.startListening(recognizerIntent)
     }

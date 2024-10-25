@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
         "up",
         "yes"
     )
+    // AudioService에서 방송하는걸 MainActivity에서 받아서 객체? (정확한 명칭 모름) 로 정의
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "SPEECH_RECOGNITION_RESULT") {
@@ -77,14 +78,14 @@ class MainActivity : ComponentActivity() {
 //        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)    // 여분의 키
 //        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")         // 언어 설정
         LocalBroadcastManager.getInstance(this).registerReceiver(
-            receiver,
-            IntentFilter("SPEECH_RECOGNITION_RESULT")
+            receiver, //객체화?된 리시버에서
+            IntentFilter("SPEECH_RECOGNITION_RESULT") // 이런 이름을 가진 action을 필터링 한다.
         )
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
                 recordButtons = {recordAndClassify()},
-                startService = {startService(intent)},
+                startService = {startService(intent)}, // 이거 작동안됨
             )
         }
     }
