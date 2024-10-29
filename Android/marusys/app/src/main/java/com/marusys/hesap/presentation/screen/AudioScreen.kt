@@ -52,15 +52,26 @@ fun AudioScreen(
         Spacer(modifier = Modifier.padding(16.dp))
         Button(
             // 버튼 클릭 리스너 설정 -> 버튼 클릭 시 작동
-//            onClick = { recordButtons() }, // 버튼 눌렀을 때 녹음 받는 기능
-            onClick = { startService() }, // 버튼 눌렀을 때 서비스를 시작시키려는 코드 ( 작동 안함...)
+            onClick = { startService() }, // 음성 녹음 Service 시작
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3182F6)),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("녹음하기")
+            Text("녹음 하는 버튼")
+        }
+        Spacer(modifier = Modifier.padding(16.dp))
+        Button(
+            // 버튼 클릭 리스너 설정 -> 버튼 클릭 시 작동
+            onClick = { recordButtons() }, // 버튼 눌렀을 때 녹음 받는 기능
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3182F6)),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text("샘플 예제 확인하는 버튼")
         }
         Spacer(modifier = Modifier.padding(16.dp))
         Text(resultText, modifier = Modifier.weight(1f), fontSize = 32.sp)

@@ -8,10 +8,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -20,15 +18,12 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
-import androidx.compose.runtime.remember
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.marusys.hesap.MainActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 private val TAG = "AudioService"
+
 class AudioService : Service() {
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var recognizerIntent: Intent
@@ -56,34 +51,33 @@ class AudioService : Service() {
                     toggleFlashlight(true)
                 } else if (result.contains("손전등 꺼", ignoreCase = true)) {
                     toggleFlashlight(false)
-                }else if (result.contains("헤이 사피", ignoreCase = true)) {
+                } else if (result.contains("헤이 사피", ignoreCase = true)) {
                     val intent = Intent(this@AudioService, OverlayService::class.java)
                     intent.action = "SHOW_OVERLAY"
                     startService(intent)
                 }
             }
-                // SPEECH_RECOGNITION_RESULT라는 이름의 intent 생성
+            // SPEECH_RECOGNITION_RESULT라는 이름의 intent 생성
             val intent = Intent("SPEECH_RECOGNITION_RESULT")
-                // 해당 intent에 matches라는 이름의 matches 결과 배열 리스트를 넣어둠
+            // 해당 intent에 matches라는 이름의 matches 결과 배열 리스트를 넣어둠
             intent.putStringArrayListExtra("matches", matches)
-                // matches의 값 확인하는 로그
-            Log.e("11111111111111111", "$matches")
-                // LocalBroadcastManager는 안드로이드에서 앱 내부의 컴포넌트 간 통신을 위해 사용되는 클래스
-                // 일반 BroadcastManager와 달리, LocalBroadcastManager는 앱 내부에서만 작동하므로 보안성이 높고 효율적입니다
-                // AudioService의 context에서 instance를 가져와서 intent에 넣고 다른 곳에서 사용할 수 있게 띄운다.
+            // matches의 값 확인하는 로그
+            Log.e("들어가 있는 텍스트", "$matches")
+            // LocalBroadcastManager는 안드로이드에서 앱 내부의 컴포넌트 간 통신을 위해 사용되는 클래스
+            // 일반 BroadcastManager와 달리, LocalBroadcastManager는 앱 내부에서만 작동하므로 보안성이 높고 효율적입니다
+            // AudioService의 context에서 instance를 가져와서 intent에 넣고 다른 곳에서 사용할 수 있게 띄운다.
             LocalBroadcastManager.getInstance(this@AudioService).sendBroadcast(intent)
-
-
             // 계속해서 음성 인식 수행
             handler.postDelayed({ startListening() }, 300)
-//            startListening()
         }
+
         override fun onReadyForSpeech(params: Bundle?) {}
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {
             //입력되는 데시벨 크기를 상수로
-//                 Log.d("sound","$rmsdB");
+            // Log.d("sound","$rmsdB");
         }
+
         override fun onPartialResults(partialResults: Bundle?) {}
         override fun onEvent(eventType: Int, params: Bundle?) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
@@ -107,16 +101,16 @@ class AudioService : Service() {
             Log.e("AudioService", "Speech recognition error: $errorMessage")
             // 일정 시간 후에 다시 시작
             handler.postDelayed({
-//                Log.d(TAG, "onError 에서 시작")
                 startListening()
             }, 2000)
         }
     }
+
     private fun initializeSpeechRecognizer() {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer.setRecognitionListener(recognitionListener)
-        // apply를 통해 추가 정보를 설정하는 것
         // 음성 인식을 위한 Intent를 설정하는 '준비' 과정 (최적화)
+        // apply를 통해 추가 정보를 설정하는 것
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -159,7 +153,6 @@ class AudioService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "onStartCommand에서 시작")
         startListening()
         return START_STICKY
     }
@@ -173,28 +166,40 @@ class AudioService : Service() {
 
     // 포그라운드 서비스를 위한 알림 생성
     private fun createNotification(): Notification {
-        val channelId = "AudioServiceChannel"
-        val channelName = "Audio Service"
-
-        // 알림 생성 로그 추가
-        Log.d("AudioService", "Creating notification")
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+        val channelId = "OverlayServiceChannel"
+        val channel =
+            NotificationChannel(channelId, "Overlay Service", NotificationManager.IMPORTANCE_LOW)
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
 
         return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("오디오 서비스")
-            .setContentText("음성 인식 중...")
-            .setSmallIcon(AndroidR.drawable.ic_notification_overlay) // 알림 아이콘 설정, 내장 리소스(android.R)에서 이미지 가져오기
-            .setContentIntent(pendingIntent)
+            .setContentTitle("오버레이 서비스")
+            .setContentText("오버레이 서비스가 실행 중입니다.")
+            .setSmallIcon(AndroidR.drawable.ic_notification_overlay) // 적절한 아이콘으로 변경
             .build()
     }
+
+    //    private fun createNotification(): Notification {
+//        val channelId = "AudioServiceChannel"
+//        val channelName = "Audio Service"
+//
+//        // 알림 생성 로그 추가
+//        Log.d(TAG, "Creating notification")
+//
+//        val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
+//        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+//        notificationManager.createNotificationChannel(channel)
+//
+//        val notificationIntent = Intent(this, MainActivity::class.java)
+//        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+//
+//        return NotificationCompat.Builder(this, channelId)
+//            .setContentTitle("오디오 서비스")
+//            .setContentText("음성 인식 중...")
+//            .setSmallIcon(AndroidR.drawable.ic_notification_overlay) // 알림 아이콘 설정, 내장 리소스(android.R)에서 이미지 가져오기
+//            .setContentIntent(pendingIntent)
+//            .build()
+//    }
     companion object {
         private const val NOTIFICATION_ID = 1
     }

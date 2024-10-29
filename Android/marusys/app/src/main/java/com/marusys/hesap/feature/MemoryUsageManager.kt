@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Process
 
+// 메모리 관련 함수 모음
 class MemoryUsageManager(private val context: Context) {
     fun getMemoryUsage(): String {
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager

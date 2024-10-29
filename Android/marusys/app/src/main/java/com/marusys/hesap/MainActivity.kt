@@ -36,17 +36,7 @@ class MainActivity : ComponentActivity() {
     private val OVERLAY_PERMISSION_REQUEST_CODE = 1
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var memoryUsageManager: MemoryUsageManager
-    // 분류할 라벨들 -> 모델 학습 시 사용한 라벨
-    private val labels = arrayOf(
-        "down",
-        "go",
-        "left",
-        "no",
-        "right",
-        "stop",
-        "up",
-        "yes"
-    )
+
     // AudioService에서 방송하는걸 MainActivity에서 받아서 객체? (정확한 명칭 모름) 로 정의
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -111,29 +101,13 @@ class MainActivity : ComponentActivity() {
     }
     private val updateMemoryRunnable = object : Runnable {
         override fun run() {
-//            mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
-            mainViewModel.setMemoryText(getMemoryUsage())
+            mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
+//            mainViewModel.setMemoryText(getMemoryUsage())
             handler.postDelayed(this, 1000) // 1초마다 업데이트
         }
     }
     private fun initializeMemoryUsageManager() {
         memoryUsageManager = MemoryUsageManager(this)
-    }
-    // 메모리 사용량 보는 테스트용 코드
-    fun getMemoryUsage(): String {
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val memoryInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memoryInfo)
-
-        val pid = Process.myPid()
-        val pInfo = activityManager.getProcessMemoryInfo(intArrayOf(pid))[0]
-
-        val totalPss = pInfo.totalPss / 1024 // KB to MB
-        val privateDirty = pInfo.totalPrivateDirty / 1024 // KB to MB
-
-        return "현재 앱 메모리 사용량:\n" +
-                "앱이 사용하는 총 메모리양, 공유 메모리 포함: $totalPss MB\n" +
-                "앱이 독점적으로 사용하는 메모리양: $privateDirty MB"
     }
     override fun onResume() {
         super.onResume()
@@ -158,7 +132,19 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
     }
-    // ======== 음성 인식 기반 분류 ========
+
+// ======== 음성 인식 기반 분류 ========
+    // 분류할 라벨들 -> 모델 학습 시 사용한 라벨
+    private val labels = arrayOf(
+        "down",
+        "go",
+        "left",
+        "no",
+        "right",
+        "stop",
+        "up",
+        "yes"
+    )
     // 현재는 버튼 리스너 기반 -> 추후에 실시간 음성인식 코드 구현
     fun recordAndClassify() {
         // 샘플 레이트 16KHz(16000Hz)
