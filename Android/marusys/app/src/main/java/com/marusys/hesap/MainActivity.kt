@@ -1,6 +1,7 @@
 package com.marusys.hesap
 
 import android.Manifest
+import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -12,21 +13,29 @@ import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.marusys.hesap.feature.MemoryUsageManager
 import com.marusys.hesap.presentation.screen.AudioScreen
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
+import com.marusys.hesap.service.AudioService
 import kotlin.math.exp
 
 class MainActivity : ComponentActivity() {
     // 여러 페이지에서 사용하는 값을 관리하는 viewModel
     private val mainViewModel = MainViewModel()
-
+    private val OVERLAY_PERMISSION_REQUEST_CODE = 1
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var memoryUsageManager: MemoryUsageManager
     // 분류할 라벨들 -> 모델 학습 시 사용한 라벨
     private val labels = arrayOf(
         "down",
@@ -49,48 +58,105 @@ class MainActivity : ComponentActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 오디오 녹음 권한이 있는지 확인
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
-            checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(
-                arrayOf(
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.CAMERA,
-                ), 1
-            )
-        } else {
-            startAudioService()
-        }
+        // 권한 체크 및 요청
+        checkAndRequestPermissions()
 
-        val intent = Intent(this, AudioService::class.java)
-        startService(intent)
-//        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-//        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)    // 여분의 키
-//        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")         // 언어 설정
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            receiver, //객체화?된 리시버에서
-            IntentFilter("SPEECH_RECOGNITION_RESULT") // 이런 이름을 가진 action을 필터링 한다.
-        )
+        // 오버레이 권한 체크 및 요청
+        checkAndRequestOverlayPermission()
+
+        // AudioService 시작
+        startAudioService()
+
+        // BroadcastReceiver 등록
+        registerBroadcastReceiver()
+
+        // 메모리 사용량 관리자 초기화
+        initializeMemoryUsageManager()
+
+        // UI 설정
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
                 recordButtons = { recordAndClassify() },
-                startService = { startService(intent) }, // 이거 작동안됨
+                startService = { startAudioService() },
             )
+        }
+    }
+    private fun checkAndRequestPermissions() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+            checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA),
+                1
+            )
+        }
+    }
+    private fun checkAndRequestOverlayPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE)
+        }
+    }
+    private fun startAudioService() {
+        val serviceIntent = Intent(this, AudioService::class.java)
+        // 포그라운드 서비스 시작
+        ContextCompat.startForegroundService(this, serviceIntent)
+    }
+    private fun registerBroadcastReceiver() {
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            receiver,
+            IntentFilter("SPEECH_RECOGNITION_RESULT")
+        )
+    }
+    private val updateMemoryRunnable = object : Runnable {
+        override fun run() {
+//            mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
+            mainViewModel.setMemoryText(getMemoryUsage())
+            handler.postDelayed(this, 1000) // 1초마다 업데이트
+        }
+    }
+    private fun initializeMemoryUsageManager() {
+        memoryUsageManager = MemoryUsageManager(this)
+    }
+    // 메모리 사용량 보는 테스트용 코드
+    fun getMemoryUsage(): String {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+
+        val pid = Process.myPid()
+        val pInfo = activityManager.getProcessMemoryInfo(intArrayOf(pid))[0]
+
+        val totalPss = pInfo.totalPss / 1024 // KB to MB
+        val privateDirty = pInfo.totalPrivateDirty / 1024 // KB to MB
+
+        return "현재 앱 메모리 사용량:\n" +
+                "앱이 사용하는 총 메모리양, 공유 메모리 포함: $totalPss MB\n" +
+                "앱이 독점적으로 사용하는 메모리양: $privateDirty MB"
+    }
+    override fun onResume() {
+        super.onResume()
+        handler.post(updateMemoryRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        handler.removeCallbacks(updateMemoryRunnable)
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == OVERLAY_PERMISSION_REQUEST_CODE) {
+            if (Settings.canDrawOverlays(this)) {
+                startService(Intent(this, AudioService::class.java))
+            } else {
+                Toast.makeText(this, "오버레이 권한이 필요합니다", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     override fun onDestroy() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
-    }
-    private fun startAudioService() {
-        val serviceIntent = Intent(this, AudioService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
     }
     // ======== 음성 인식 기반 분류 ========
     // 현재는 버튼 리스너 기반 -> 추후에 실시간 음성인식 코드 구현
@@ -217,12 +283,6 @@ class MainActivity : ComponentActivity() {
             }
         }).start()
     } // ======== wav 파일 기반 분류 ========
-    // 오버레이 권한 요청
-    private fun requestOverlayPermission() {
-        val myIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-        myIntent.data = Uri.parse("package:$packageName")
-        startActivityForResult(myIntent, 200)
-    }
 }
 
 

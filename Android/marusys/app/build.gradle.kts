@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.marusys.hesap"
-        minSdk = 24
+        minSdk = 31
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -25,6 +25,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -49,13 +50,15 @@ composeCompiler {
 dependencies {
     // Compose
     implementation(platform(libs.compose.bom))
-    implementation(libs.ui.android)
     androidTestImplementation(platform(libs.compose.bom))
+    implementation(libs.activity.compose)
     implementation(libs.runtime)
     implementation(libs.core.ktx)
-    implementation(libs.activity.compose)
     implementation(libs.material3)
     implementation(libs.accompanist.themeadapter.material3)
+    implementation(libs.ui.android)
+    implementation(libs.lifecycle.service)
+    implementation(libs.ui.tooling.preview.android)
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     // 텐서플로 의존성

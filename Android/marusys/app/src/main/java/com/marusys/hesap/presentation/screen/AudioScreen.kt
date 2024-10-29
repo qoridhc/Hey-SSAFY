@@ -32,7 +32,7 @@ fun AudioScreen(
     startService: () -> Unit,
 ) {
     val resultText by viewModel.resultText.collectAsState()
-//    val errorText by viewModel.errorText.collectAsState()
+    val memoryText by viewModel.memoryText.collectAsState()
     val context = LocalContext.current
     val activity = context as ComponentActivity
 
@@ -52,8 +52,8 @@ fun AudioScreen(
         Spacer(modifier = Modifier.padding(16.dp))
         Button(
             // 버튼 클릭 리스너 설정 -> 버튼 클릭 시 작동
-            onClick = { recordButtons() }, // 버튼 눌렀을 때 녹음 받는 기능
-//            onClick = { startService() }, // 버튼 눌렀을 때 서비스를 시작시키려는 코드 ( 작동 안함...)
+//            onClick = { recordButtons() }, // 버튼 눌렀을 때 녹음 받는 기능
+            onClick = { startService() }, // 버튼 눌렀을 때 서비스를 시작시키려는 코드 ( 작동 안함...)
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -64,7 +64,7 @@ fun AudioScreen(
         }
         Spacer(modifier = Modifier.padding(16.dp))
         Text(resultText, modifier = Modifier.weight(1f), fontSize = 32.sp)
-//        Spacer(modifier = Modifier.padding(16.dp))
-//        Text(errorText, modifier = Modifier.weight(1f), fontSize = 32.sp) //
+        Spacer(modifier = Modifier.padding(16.dp))
+        Text(memoryText, modifier = Modifier.weight(1f), fontSize = 32.sp) //
     }
 }

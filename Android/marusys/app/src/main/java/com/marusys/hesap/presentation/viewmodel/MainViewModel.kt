@@ -11,15 +11,14 @@ class MainViewModel() : ViewModel() {
     private val _resultText = MutableStateFlow("") // viewModel 내에서 함수를 통해서만 수정하기 위해
     val resultText = _resultText.asStateFlow() // 외부에서 바꿔 쓰지 않지만, 읽기 위해 정의
 
+    private val _memoryText = MutableStateFlow("") // viewModel 내에서 함수를 통해서만 수정하기 위해
+    val memoryText = _memoryText.asStateFlow() // 외부에서 바꿔 쓰지 않지만, 읽기 위해 정의
+
     // viewModel 내 변수 수정을 위한 함수
     fun setResultText(text : String){
         _resultText.value = text
     }
-
-//    private val _errorText = MutableStateFlow("")
-//    val errorText = _errorText.asStateFlow()
-//
-//    fun setErrorText(text : String){
-//        _errorText.value = text
-//    }
+    fun setMemoryText(text : String){
+        _memoryText.value = text
+    }
 }
