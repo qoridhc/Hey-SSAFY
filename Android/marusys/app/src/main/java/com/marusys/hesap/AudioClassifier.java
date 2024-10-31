@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AudioClassifier {
-    private static final String MODEL_FILE = "converted_model_ramda.tflite";
+    private static final String MODEL_FILE = "right_original_reverse.tflite";
     private Interpreter tflite;
     private int inputHeight;
     private int inputWidth;
@@ -44,7 +44,7 @@ public class AudioClassifier {
     // 입력 버퍼로 들어오는 값을 통해 분류를 수행하는 메소드
     public float[] classify(ByteBuffer inputBuffer) {
         // 결과를 담을 버퍼 준비 (1차원 8개의 분류 값)
-        float[][] outputBuffer = new float[1][8];
+        float[][] outputBuffer = new float[1][1];
 
         // 모델 실행 전 입력 shape 확인
         Object[] inputs = new Object[]{inputBuffer};
@@ -55,6 +55,7 @@ public class AudioClassifier {
         tflite.runForMultipleInputsOutputs(inputs, outputs);
 
         float[] result = outputBuffer[0];
+
         return result;
     }
 

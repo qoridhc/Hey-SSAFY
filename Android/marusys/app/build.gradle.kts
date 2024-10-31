@@ -68,6 +68,8 @@ dependencies {
     // 스펙토그램 변환을 위한 의존성
     implementation("com.github.wendykierp:JTransforms:3.1")
 
+    // 오프라인 음성인식 라이브러리 PocketSphinx
+
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)

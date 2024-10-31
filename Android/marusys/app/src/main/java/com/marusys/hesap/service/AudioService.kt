@@ -1,15 +1,19 @@
 package com.marusys.hesap.service
 
-import android.R as AndroidR
-import android.app.Notification
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -18,94 +22,50 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.marusys.hesap.AudioClassifier
 import com.marusys.hesap.MainActivity
+import com.marusys.hesap.R
 
 private val TAG = "AudioService"
-
 class AudioService : Service() {
     private lateinit var speechRecognizer: SpeechRecognizer
+    private lateinit var audioRecord: AudioRecord
+    private var isHotwordDetectionActive = false
+    private var isFullRecognitionActive = false
     private lateinit var recognizerIntent: Intent
     private lateinit var cameraManager: CameraManager
     private val handler = Handler(Looper.getMainLooper())
     private var cameraId: String? = null
     private var isListening = false // 음성 인식 상태를 추적하는 변수 추가
+    // 임의 추가
+    private lateinit var notificationManager: NotificationManager
+    private lateinit var notificationBuilder: NotificationCompat.Builder
+
+    // AudioClassifier
+    private var isRealTimeListening = false  // 실시간 감지 상태를 추적하는 변수
+    private lateinit var classifier: AudioClassifier  // AudioClassifier 인스턴스
+
+    private val bufferSize = AudioRecord.getMinBufferSize(
+        16000,
+        AudioFormat.CHANNEL_IN_MONO,
+        AudioFormat.ENCODING_PCM_16BIT
+    )
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("AudioService", "Starting foreground service")
-        startForeground(NOTIFICATION_ID, createNotification())
-        initializeSpeechRecognizer()
         initializeCamera()
+        initializeSpeechRecognizer()
+        classifier = AudioClassifier(this)  // AudioClassifier 초기화
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationBuilder = createNotificationBuilder()
+        startForeground(NOTIFICATION_ID, notificationBuilder.build())
+        createNotificationChannel()
+        startHotwordDetection()
     }
-
-    private val recognitionListener = object : RecognitionListener {
-        override fun onResults(results: Bundle?) {
-            // 음성 인식 완료 후 상태 업데이트
-            isListening = false
-            // 음성 인식된 단어가 리스트형태로
-            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            matches?.firstOrNull()?.let { result ->
-                if (result.contains("손전등 켜", ignoreCase = true)) {
-                    toggleFlashlight(true)
-                } else if (result.contains("손전등 꺼", ignoreCase = true)) {
-                    toggleFlashlight(false)
-                } else if (result.contains("헤이 사피", ignoreCase = true)) {
-                    val intent = Intent(this@AudioService, OverlayService::class.java)
-                    intent.action = "SHOW_OVERLAY"
-                    startService(intent)
-                }
-            }
-            // SPEECH_RECOGNITION_RESULT라는 이름의 intent 생성
-            val intent = Intent("SPEECH_RECOGNITION_RESULT")
-            // 해당 intent에 matches라는 이름의 matches 결과 배열 리스트를 넣어둠
-            intent.putStringArrayListExtra("matches", matches)
-            // matches의 값 확인하는 로그
-            Log.e("들어가 있는 텍스트", "$matches")
-            // LocalBroadcastManager는 안드로이드에서 앱 내부의 컴포넌트 간 통신을 위해 사용되는 클래스
-            // 일반 BroadcastManager와 달리, LocalBroadcastManager는 앱 내부에서만 작동하므로 보안성이 높고 효율적입니다
-            // AudioService의 context에서 instance를 가져와서 intent에 넣고 다른 곳에서 사용할 수 있게 띄운다.
-            LocalBroadcastManager.getInstance(this@AudioService).sendBroadcast(intent)
-            // 계속해서 음성 인식 수행
-            handler.postDelayed({ startListening() }, 300)
-        }
-
-        override fun onReadyForSpeech(params: Bundle?) {}
-        override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {
-            //입력되는 데시벨 크기를 상수로
-            // Log.d("sound","$rmsdB");
-        }
-
-        override fun onPartialResults(partialResults: Bundle?) {}
-        override fun onEvent(eventType: Int, params: Bundle?) {}
-        override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onEndOfSpeech() {}
-
-        override fun onError(error: Int) {
-            val errorMessage = when (error) {
-                SpeechRecognizer.ERROR_AUDIO -> "오디오 녹음 오류"
-                SpeechRecognizer.ERROR_CLIENT -> "클라이언트 측 오류"
-                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "권한 부족"
-                SpeechRecognizer.ERROR_NETWORK -> "네트워크 오류"
-                SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "네트워크 시간 초과"
-                SpeechRecognizer.ERROR_NO_MATCH -> "일치하는 음성 없음"
-                SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "음성 인식기 사용 중"
-                SpeechRecognizer.ERROR_SERVER -> "서버 오류"
-                SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "음성 입력 시간 초과"
-                else -> "알 수 없는 오류"
-            }
-            // 에러 발생 시 상태 업데이트
-            isListening = false
-            Log.e("AudioService", "Speech recognition error: $errorMessage")
-            // 일정 시간 후에 다시 시작
-            handler.postDelayed({
-                startListening()
-            }, 2000)
-        }
-    }
-
+    // 음성녹음 초기화
     private fun initializeSpeechRecognizer() {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer.setRecognitionListener(recognitionListener)
@@ -129,7 +89,7 @@ class AudioService : Service() {
 //            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1000)
         }
     }
-
+    // 카메라 세팅 초기화
     private fun initializeCamera() {
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraId = cameraManager.cameraIdList.firstOrNull {
@@ -137,23 +97,232 @@ class AudioService : Service() {
                 .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
         }
     }
-
-    // 인식 시작하기
-    private fun startListening() {
-        if (!isListening) {
-            isListening = true
-            speechRecognizer.startListening(recognizerIntent)
-        }
-    }
-
+    // 손전등 on off
     private fun toggleFlashlight(on: Boolean) {
         cameraId?.let { id ->
             cameraManager.setTorchMode(id, on)
         }
     }
+    // 핫워드 인식
+    @SuppressLint("MissingPermission") //퍼미션 요구 무시하기
+    private fun startHotwordDetection() {
+        if (isHotwordDetectionActive) return
+
+        isHotwordDetectionActive = true
+        Thread {
+            val buffer = ShortArray(bufferSize)
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                16000,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                bufferSize
+            )
+
+            audioRecord.startRecording()
+
+            while (isHotwordDetectionActive) {
+                val readSize = audioRecord.read(buffer, 0, bufferSize)
+                if (readSize > 0) {
+                    // 여기서 기존 AI 모델로 호출어 감지
+                    val isHotwordDetected = checkHotword(buffer)
+                    if (isHotwordDetected) {
+//                        startFullSpeechRecognition()
+                        Log.e(TAG,"111111111111111111111111111111111")
+                        startRealTimeRecording()
+                    }
+                }
+                // 전력 소비 감소를 위한 짧은 대기
+                Thread.sleep(10)
+            }
+        }.start()
+    }
+
+    private fun startFullSpeechRecognition() {
+        if (isFullRecognitionActive) return
+
+        isFullRecognitionActive = true
+        updateNotification("음성 명령을 기다리는 중...")
+
+        speechRecognizer.startListening(recognizerIntent)
+    }
+
+    private val recognitionListener = object : RecognitionListener {
+        override fun onPartialResults(partialResults: Bundle?) {
+            val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            matches?.firstOrNull()?.let { result ->
+                updateNotification("인식 중: $result")
+            }
+        }
+        override fun onResults(results: Bundle?) {
+            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            matches?.firstOrNull()?.let { result ->
+                handleVoiceCommand(result)
+            }
+            val intent = Intent("SPEECH_RECOGNITION_RESULT")
+            // 해당 intent에 matches라는 이름의 matches 결과 배열 리스트를 넣어둠
+            intent.putStringArrayListExtra("matches", matches)
+            // matches의 값 확인하는 로그
+            Log.e("들어가 있는 텍스트", "$matches")
+            // 명령 처리 후 다시 호출어 감지 모드로 전환
+            isFullRecognitionActive = false
+            updateNotification("호출어 대기 중...")
+            LocalBroadcastManager.getInstance(this@AudioService).sendBroadcast(intent)
+        }
+        override fun onError(error: Int) {
+            isFullRecognitionActive = false
+            updateNotification("호출어 대기 중...")
+        }
+        override fun onReadyForSpeech(params: Bundle?) {}
+        override fun onBeginningOfSpeech() {}
+        override fun onRmsChanged(rmsdB: Float) {
+            //입력되는 데시벨 크기를 상수로
+            // Log.d("sound","$rmsdB");
+        }
+        override fun onEvent(eventType: Int, params: Bundle?) {}
+        override fun onBufferReceived(buffer: ByteArray?) {}
+        override fun onEndOfSpeech() {}
+
+    }
+    private fun updateNotification(text: String) {
+        notificationBuilder.setContentText(text)
+        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+    }
+    private fun handleVoiceCommand(command: String) {
+        when {
+            command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
+            command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
+            command.contains("헤이 사피", ignoreCase = true) -> {
+                val intent = Intent(this@AudioService, OverlayService::class.java)
+                intent.action = "SHOW_OVERLAY"
+                startService(intent) // Overlay Service 시작
+            }
+        }
+    }
+
+    private fun checkHotword(audioData: ShortArray): Boolean {
+        // 여기에 기존 AI 모델을 사용한 호출어 감지 로직 구현
+        return false // 임시 반환값
+    }
+    // 포그라운드 서비스를 위한 알림 생성
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            "AudioServiceChannel",
+            "Audio Service",
+            NotificationManager.IMPORTANCE_LOW
+        )
+        notificationManager.createNotificationChannel(channel)
+    }
+    private fun createNotificationBuilder(): NotificationCompat.Builder {
+        val pendingIntent: PendingIntent =
+            Intent(this, MainActivity::class.java).let { notificationIntent ->
+                PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+            }
+        return NotificationCompat.Builder(this, "AudioServiceChannel")
+            .setContentTitle("마르시스")
+            .setContentText("음성 인식 대기 중...")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
+    }
+
+    private fun startRealTimeRecording() {
+        val sampleRate = 16000
+        val windowSize = 16000  // 1초 분량의 샘플
+        val stepSize = 8000     // 0.5초 분량의 샘플
+
+        val bufferSize = AudioRecord.getMinBufferSize(
+            sampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        // 알림 업데이트
+        updateNotification("호출어 감지 중...")
+
+        Thread {
+            isRealTimeListening = true
+            val audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                bufferSize
+            )
+
+            if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
+                Log.e(TAG, "AudioRecord 초기화 실패")
+                updateNotification("녹음 초기화 실패")
+                return@Thread
+            }
+
+            val audioBuffer = ShortArray(bufferSize / 2)
+            val slidingWindowBuffer = FloatArray(windowSize)
+            var bufferPosition = 0
+
+            audioRecord.startRecording()
+
+            while (isRealTimeListening) {
+                val readSize = audioRecord.read(audioBuffer, 0, audioBuffer.size)
+                if (readSize > 0) {
+                    for (i in 0 until readSize) {
+                        slidingWindowBuffer[bufferPosition] = audioBuffer[i] / 32768.0f
+                        bufferPosition++
+
+                        if (bufferPosition >= windowSize) {
+                            bufferPosition = 0
+
+                            try {
+                                val inputBuffer = classifier.createInputBuffer(slidingWindowBuffer)
+                                val results = classifier.classify(inputBuffer)
+
+                                // 결과를 브로드캐스트로 전송
+                                sendClassificationResult(results[0])
+
+                                // 호출어가 감지되면
+                                if (results[0] >= 0.9f) {
+                                    // 전체 음성 인식 모드로 전환
+                                    isRealTimeListening = false
+                                    speechRecognizer.startListening(recognizerIntent)
+                                    break
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "분류 중 오류 발생", e)
+                                updateNotification("분류 중 오류 발생")
+                            }
+
+                            // 슬라이딩 윈도우 이동
+                            System.arraycopy(
+                                slidingWindowBuffer,
+                                stepSize,
+                                slidingWindowBuffer,
+                                0,
+                                windowSize - stepSize
+                            )
+                            bufferPosition = windowSize - stepSize
+                        }
+                    }
+                }
+            }
+            audioRecord.stop()
+            audioRecord.release()
+        }.start()
+    }
+    private fun sendClassificationResult(probability: Float) {
+        val intent = Intent("CLASSIFICATION_RESULT")
+        intent.putExtra("probability", probability)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startListening()
+//        startListening()
         return START_STICKY
     }
 
@@ -161,45 +330,12 @@ class AudioService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        speechRecognizer.destroy() // 서비스 종료시 음성인식 종료시켜서 배터리 아끼기
+        isRealTimeListening = false // classifier
+        isHotwordDetectionActive = false
+        audioRecord.stop()
+        audioRecord.release()
+        speechRecognizer.destroy()
     }
-
-    // 포그라운드 서비스를 위한 알림 생성
-    private fun createNotification(): Notification {
-        val channelId = "OverlayServiceChannel"
-        val channel =
-            NotificationChannel(channelId, "Overlay Service", NotificationManager.IMPORTANCE_LOW)
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
-
-        return NotificationCompat.Builder(this, channelId)
-            .setContentTitle("오버레이 서비스")
-            .setContentText("오버레이 서비스가 실행 중입니다.")
-            .setSmallIcon(AndroidR.drawable.ic_notification_overlay) // 적절한 아이콘으로 변경
-            .build()
-    }
-
-    //    private fun createNotification(): Notification {
-//        val channelId = "AudioServiceChannel"
-//        val channelName = "Audio Service"
-//
-//        // 알림 생성 로그 추가
-//        Log.d(TAG, "Creating notification")
-//
-//        val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
-//        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-//        notificationManager.createNotificationChannel(channel)
-//
-//        val notificationIntent = Intent(this, MainActivity::class.java)
-//        val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
-//
-//        return NotificationCompat.Builder(this, channelId)
-//            .setContentTitle("오디오 서비스")
-//            .setContentText("음성 인식 중...")
-//            .setSmallIcon(AndroidR.drawable.ic_notification_overlay) // 알림 아이콘 설정, 내장 리소스(android.R)에서 이미지 가져오기
-//            .setContentIntent(pendingIntent)
-//            .build()
-//    }
     companion object {
         private const val NOTIFICATION_ID = 1
     }
