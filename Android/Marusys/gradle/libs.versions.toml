@@ -12,6 +12,7 @@ activity = "1.9.3"
 constraintlayout = "2.1.4"
 coreKtx = "1.13.1"
 uiAndroid = "1.7.4"
+core = "2.5"
 
 [libraries]
 accompanist-themeadapter-material3 = { module = "com.google.accompanist:accompanist-themeadapter-material3", version.ref = "accompanistThemeadapterMaterial3" }
@@ -28,6 +29,7 @@ core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx"
 material3 = { module = "androidx.compose.material3:material3" }
 runtime = { module = "androidx.compose.runtime:runtime" }
 ui-android = { group = "androidx.compose.ui", name = "ui-android", version.ref = "uiAndroid" }
+core = { group = "be.tarsos.dsp", name = "core", version.ref = "core" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
