@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+
 public class AudioClassifier {
     private static final String MODEL_FILE = "hey_ssafy_32000.tflite";
     private Interpreter tflite;
@@ -34,8 +35,6 @@ public class AudioClassifier {
             inputHeight = inputShape[1];  // 16000 샘플 길이
             inputWidth = 1;  // 샘플이므로 1
             inputChannels = 1;  // 채널 값도 1로 설정
-
-
         } catch (IOException e) {
             Log.e("AudioClassifier", "Error loading model", e);
         }
@@ -59,7 +58,7 @@ public class AudioClassifier {
         return result;
     }
 
-    // 오디오 데이터를 ByteBuffer로 변환하는 메소드
+     //오디오 데이터를 ByteBuffer로 변환하는 메소드
     public ByteBuffer createInputBuffer(float[] audioData) {
 
         // 입력 버퍼 생성 (4 bytes per float * 16000 samples * 1 channel)
@@ -77,7 +76,40 @@ public class AudioClassifier {
 
         return inputBuffer;
     }
-
+//
+//    public ByteBuffer createInputBuffer(float[] audioData) {
+//        // 입력 버퍼 생성 (4 bytes per float * 16000 samples * 1 channel)
+//        ByteBuffer inputBuffer = ByteBuffer.allocateDirect(4 * inputHeight * inputWidth * inputChannels);
+//        inputBuffer.order(ByteOrder.nativeOrder());
+//
+//        // MFCC 설정
+//        int sampleRate = 16000;
+//        MFCC mfcc = new MFCC(13, sampleRate); // 13차원 MFCC
+//        AudioDispatcher dispatcher = AudioDispatcherFactory.fromFloatArray(audioData, sampleRate);
+//        dispatcher.addAudioProcessor(mfcc);
+//
+//        // MFCC 프로세서 설정
+//        float[] mfccValues = new float[13]; // 13차원 MFCC 결과를 저장할 배열
+//        dispatcher.addAudioProcessor(new MFCCProcessor() {
+//            @Override
+//            public void process(MFCC mfcc) {
+//                System.arraycopy(mfcc.getMFCC(), 0, mfccValues, 0, mfccValues.length);
+//            }
+//        });
+//
+//        // 오디오 데이터를 MFCC로 변환
+//        dispatcher.run(); // dispatcher 실행하여 MFCC 계산
+//
+//        // MFCC 결과를 버퍼에 넣기
+//        for (float value : mfccValues) {
+//            inputBuffer.putFloat(value);
+//        }
+//
+//        // 버퍼 위치를 처음으로 되돌리기
+//        inputBuffer.rewind();
+//
+//        return inputBuffer;
+//    }
 
     // TFlite 모델 파일 로드
     private MappedByteBuffer loadModelFile(Context context, String modelPath) throws IOException {

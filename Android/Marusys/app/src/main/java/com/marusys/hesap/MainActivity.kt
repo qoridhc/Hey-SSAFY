@@ -58,9 +58,9 @@ class MainActivity : ComponentActivity() {
     private var isListening = false
 
     fun realTimeRecordAndClassify() {
-        val sampleRate = 32000
-        val windowSize = 32000  // 2초 분량의 샘플 (32000개)
-        val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
+        val sampleRate = 16000
+        val windowSize = 16000  // 2초 분량의 샘플 (32000개)
+        val stepSize = 4000     // 0.5초 분량의 샘플 (겹치는 구간)
 
         val bufferSize = AudioRecord.getMinBufferSize(
             sampleRate,
@@ -119,6 +119,10 @@ class MainActivity : ComponentActivity() {
                             try {
                                 val classifier = AudioClassifier(this)
                                 val inputBuffer = classifier.createInputBuffer(slidingWindowBuffer)
+
+                                // 전처리 MFCC
+
+
                                 val results = classifier.classify(inputBuffer)
 
                                 // results[0] 값을 실시간으로 화면에 표시
