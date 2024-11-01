@@ -48,22 +48,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 오디오 녹음 권한이 있는지 확인
-//        if (ContextCompat.checkSelfPermission(
-//                this,
-//                Manifest.permission.RECORD_AUDIO
-//            ) != PackageManager.PERMISSION_GRANTED
-//        ) {
-//            // 권한이 없으면 요청 메서드 실행
-//            ActivityCompat.requestPermissions(
-//                this,
-//                arrayOf(Manifest.permission.RECORD_AUDIO),
-//                1
-//            )
-//        }else{
-//            realTimeRecordAndClassify()
-//        }
-
         // 권한 체크 및 요청
         checkAndRequestPermissions()
 
@@ -75,6 +59,7 @@ class MainActivity : ComponentActivity() {
 
         // BroadcastReceiver 등록
         registerBroadcastReceiver()
+
         // 메모리 사용량 관리자 초기화
         initializeMemoryUsageManager()
 
