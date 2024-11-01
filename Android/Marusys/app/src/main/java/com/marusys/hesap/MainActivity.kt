@@ -7,11 +7,14 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.marusys.hesap.feature.MemoryUsageManager
 import com.marusys.hesap.presentation.screen.AudioScreen
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import java.util.Arrays
@@ -19,6 +22,8 @@ import java.util.Arrays
 class MainActivity : ComponentActivity() {
     // 여러 페이지에서 사용하는 값을 관리하는 viewModel
     private val mainViewModel = MainViewModel()
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var memoryUsageManager: MemoryUsageManager
 
     // 분류할 라벨들 -> 모델 학습 시 사용한 라벨
 
@@ -30,20 +35,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 오디오 녹음 권한이 있는지 확인
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // 권한이 없으면 요청 메서드 실행
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.RECORD_AUDIO),
-                1
-            )
-        }else{
-            realTimeRecordAndClassify()
-        }
+        checkAndRequestPermissions()
+        // 메모리 사용량 관리자 초기화
+        initializeMemoryUsageManager()
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
@@ -51,7 +45,39 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+    private val updateMemoryRunnable = object : Runnable {
+        override fun run() {
+            mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
+            handler.postDelayed(this, 1000) // 1초마다 업데이트
+        }
+    }
 
+    private fun initializeMemoryUsageManager() {
+        memoryUsageManager = MemoryUsageManager(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 화면 갔다가 돌아왔을 때 받기위함
+        realTimeRecordAndClassify()
+        handler.post(updateMemoryRunnable)
+
+    }
+    override fun onPause() {
+        super.onPause()
+        handler.removeCallbacks(updateMemoryRunnable)
+    }
+    // 권한 체크 및 요청
+    private fun checkAndRequestPermissions() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+            checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA),
+                1
+            )
+        }
+    }
     // ======== 음성 인식 기반 분류 ========
 
     // 호출어 인식 여부에 따라 스레드 일시 중단 시키기 위한 변수
