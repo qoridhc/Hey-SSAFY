@@ -64,8 +64,8 @@ class MainActivity : ComponentActivity() {
     private var isListening = false
 
     fun realTimeRecordAndClassify() {
-        val sampleRate = 16000
-        val windowSize = 16000  // 1초 분량의 샘플 (16000개)
+        val sampleRate = 32000
+        val windowSize = 32000  // 2초 분량의 샘플 (32000개)
         val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
 
         val bufferSize = AudioRecord.getMinBufferSize(
@@ -133,7 +133,7 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
-                                if (results[0] >= 0.9f) {
+                                if (results[0] >= 0.8f) {
                                     runOnUiThread {
                                         showSuccessDialog()
                                     }
