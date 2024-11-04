@@ -1,8 +1,13 @@
 package com.marusys.hesap
 
 import android.Manifest
+import android.app.ActivityManager
 import android.app.AlertDialog
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -12,11 +17,20 @@ import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.liveData
 import com.marusys.hesap.feature.MemoryUsageManager
+import com.marusys.hesap.feature.RecordRecognitionState
+import com.marusys.hesap.feature.RecordStateManager
 import com.marusys.hesap.presentation.screen.AudioScreen
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
+import com.marusys.hesap.service.AudioService
+import kotlinx.coroutines.launch
 import java.util.Arrays
 
 class MainActivity : ComponentActivity() {
@@ -24,9 +38,10 @@ class MainActivity : ComponentActivity() {
     private val mainViewModel = MainViewModel()
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var memoryUsageManager: MemoryUsageManager
+    // 호출어 인식 여부에 따라 스레드 일시 중단 시키기 위한 변수
+    private var isListening = false
 
     // 분류할 라벨들 -> 모델 학습 시 사용한 라벨
-
     private val labels = arrayOf(
         "unknown",
         "ssafy"
@@ -38,6 +53,20 @@ class MainActivity : ComponentActivity() {
         checkAndRequestPermissions()
         // 메모리 사용량 관리자 초기화
         initializeMemoryUsageManager()
+        // 상태 관찰
+        lifecycleScope.launch {
+            RecordStateManager.recordState.collect { state ->
+                when (state) {
+                    is RecordRecognitionState.WaitingForKeyword -> {
+                        isListening = true
+                        realTimeRecordAndClassify()
+                    }
+                    else -> {
+                        // 다른 상태 처리
+                    }
+                }
+            }
+        }
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
@@ -55,6 +84,7 @@ class MainActivity : ComponentActivity() {
     private fun initializeMemoryUsageManager() {
         memoryUsageManager = MemoryUsageManager(this)
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -81,9 +111,9 @@ class MainActivity : ComponentActivity() {
     // ======== 음성 인식 기반 분류 ========
 
     // 호출어 인식 여부에 따라 스레드 일시 중단 시키기 위한 변수
-    private var isListening = false
+//    private var isListening = false // 위로 이동
 
-    fun realTimeRecordAndClassify() {
+    private fun realTimeRecordAndClassify() {
         val sampleRate = 32000
         val windowSize = 32000  // 2초 분량의 샘플 (32000개)
         val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
@@ -143,6 +173,7 @@ class MainActivity : ComponentActivity() {
                             bufferPosition = 0
 
                             try {
+//                                val audioData = captureAudio() // 오디오 캡처 함수
                                 val classifier = AudioClassifier(this)
                                 val inputBuffer = classifier.createInputBuffer(slidingWindowBuffer)
                                 val results = classifier.classify(inputBuffer)
@@ -155,6 +186,9 @@ class MainActivity : ComponentActivity() {
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
                                 if (results[0] >= 0.8f) {
                                     runOnUiThread {
+                                        RecordStateManager.updateState(RecordRecognitionState.KeywordDetected)
+                                        // 호출어 감지 -> AudioService 시작
+                                        startAudioService()
                                         showSuccessDialog()
                                     }
                                     isListening = false  // 스레드 중단
@@ -178,12 +212,20 @@ class MainActivity : ComponentActivity() {
             audioRecord.release()
         }.start()
     }
+    // 서비스 시작
+    private fun startAudioService() {
+        val serviceIntent = Intent(this, AudioService::class.java)
+        ContextCompat.startForegroundService(this, serviceIntent)
+        // 포그라운드 서비스 시작
+    //    ContextCompat.startForegroundService(this, serviceIntent)
+    }
 
     // 호출어 인식 성공 시 보여줄 팝업
     private fun showSuccessDialog() {
         AlertDialog.Builder(this)
             .setTitle("호출어 인식 성공")
-            .setMessage("호출어가 성공적으로 인식되었습니다!")
+//            .setMessage("호출어가 성공적으로 인식되었습니다!")
+            .setMessage(mainViewModel.alertText.value) // alert 창 텍스트
             .setPositiveButton("확인") { dialog, _ ->
                 dialog.dismiss()  // 팝업 닫기
                 realTimeRecordAndClassify()  // 스레드 재시작
