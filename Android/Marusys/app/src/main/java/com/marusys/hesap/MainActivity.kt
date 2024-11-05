@@ -13,7 +13,6 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.marusys.hesap.feature.MemoryUsageManager
 import com.marusys.hesap.presentation.screen.AudioScreen
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
