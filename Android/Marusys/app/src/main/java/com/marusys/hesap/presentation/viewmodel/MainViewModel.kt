@@ -11,16 +11,10 @@ class MainViewModel() : ViewModel() {
     private val _memoryText = MutableStateFlow("")
     val memoryText = _memoryText.asStateFlow()
 
-    private val _alertText = MutableStateFlow("")
-    val alertText = _alertText.asStateFlow()
-
     fun setResultText(text : String){
         _resultText.value = text
     }
     fun setMemoryText(text : String){
         _memoryText.value = text
-    }
-    fun setAlertText(text : String){
-        _alertText.value = text
     }
 }

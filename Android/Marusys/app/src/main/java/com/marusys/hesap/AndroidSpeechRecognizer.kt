@@ -9,15 +9,15 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.marusys.hesap.feature.RecordRecognitionState
-import com.marusys.hesap.feature.RecordStateManager
-import com.marusys.hesap.feature.VoiceRecognizer
+import com.marusys.hesap.feature.VoiceRecognitionEngine
+import com.marusys.hesap.feature.VoiceRecognitionState
+import com.marusys.hesap.feature.VoiceStateManager
 import com.marusys.hesap.service.AudioService
 
 class AndroidSpeechRecognizer(
     private val context: Context,
-    private val callback: VoiceRecognizer.Callback
-) : VoiceRecognizer {
+    private val callback: VoiceRecognitionEngine.Callback
+) : VoiceRecognitionEngine {
     private val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
     // 음성 인식을 위한 Intent를 설정하는 '준비' 과정 (최적화)
         // apply를 통해 추가 정보를 설정하는 것
@@ -40,11 +40,13 @@ class AndroidSpeechRecognizer(
     }
 
     private fun setupRecognitionListener() {
+        Log.d("setupRecognitionListener","setupRecognitionListener start")
         speechRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onResults(results: Bundle?) {
 
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                matches?.firstOrNull()?.let { result -> callback.onResult(result) }
+                matches?.firstOrNull()?.let { result -> callback.onCommandRecognized(result) }
+                Log.d("setupRecognitionListener onResult",matches.toString())
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
@@ -52,14 +54,21 @@ class AndroidSpeechRecognizer(
             }
 
             override fun onError(error: Int) {
-                callback.onError(getErrorMessage(error))
-                RecordStateManager.updateState(RecordRecognitionState.WaitingForKeyword)
+                val errorMessage = getErrorMessage(error)
+                Log.e("SpeechRecognizer", "Error occurred: $errorMessage")
+                callback.onError(errorMessage)
+                VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword)
+//                callback.onError(getErrorMessage(error))
             }
 
             // 다른 메서드들 구현
 
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
+            override fun onReadyForSpeech(params: Bundle?) {
+                Log.d("SpeechRecognizer", "onReadyForSpeech to listen...")
+            }
+            override fun onBeginningOfSpeech() {
+                Log.d("SpeechRecognizer", "onBeginningOfSpeech to listen...")
+            }
             override fun onRmsChanged(rmsdB: Float) {
                 //입력되는 데시벨 크기를 상수로
                 // Log.d("sound","$rmsdB");
@@ -71,11 +80,13 @@ class AndroidSpeechRecognizer(
         })
     }
 
-    override fun startListening() {
+
+    override fun startCommandRecognition() {
+        Log.d("SpeechRecognizer", "Starting to listen...")
         speechRecognizer.startListening(recognizerIntent)
     }
 
-    override fun stopListening() {
+    override fun stopRecognition() {
         speechRecognizer.stopListening()
     }
 
