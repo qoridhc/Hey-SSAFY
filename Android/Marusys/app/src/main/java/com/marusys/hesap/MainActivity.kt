@@ -64,10 +64,12 @@ class MainActivity : ComponentActivity() {
         handler.post(updateMemoryRunnable)
 
     }
+
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(updateMemoryRunnable)
     }
+
     // 권한 체크 및 요청
     private fun checkAndRequestPermissions() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
@@ -85,7 +87,7 @@ class MainActivity : ComponentActivity() {
     private var isListening = false
 
     fun realTimeRecordAndClassify() {
-        val sampleRate = 32000
+        val sampleRate = 16000
         val windowSize = 32000  // 2초 분량의 샘플 (32000개)
         val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
 
@@ -145,32 +147,7 @@ class MainActivity : ComponentActivity() {
                             val windowCopy = slidingWindowBuffer.clone()
                             audioQueue.put(windowCopy)  // 큐에 윈도우 데이터를 추가
 
-                            try {
-                                val classifier = AudioClassifier(this)
-                                val inputBuffer = classifier.createInputBuffer(slidingWindowBuffer)
-                                val results = classifier.classify(inputBuffer)
-
-                                // results[0] 값을 실시간으로 화면에 표시
-                                runOnUiThread {
-                                    mainViewModel.setResultText("확률값: ${results[0]}")
-                                }
-
-                                // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
-                                if (results[0] >= 0.8f) {
-                                    runOnUiThread {
-                                        showSuccessDialog()
-                                    }
-                                    isListening = false  // 스레드 중단
-                                    break  // 루프 종료
-                                }
-                            } catch (e: Exception) {
-                                Log.e("MainActivity", "분류 중 오류 발생", e)
-                                runOnUiThread {
-                                    mainViewModel.setResultText("분류 중 오류가 발생했습니다: " + e.message)
-                                }
-                            }
-
-                            // 슬라이딩 윈도우를 50% 이동시키기 위해 이전 데이터를 복사
+                            // 슬라이딩 윈도우 25% 이동
                             System.arraycopy(slidingWindowBuffer, stepSize, slidingWindowBuffer, 0, windowSize - stepSize)
                             bufferPosition = windowSize - stepSize
                         }
