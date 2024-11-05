@@ -15,14 +15,16 @@ import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.jtransforms.fft.FloatFFT_1D;
 
 
 public class AudioClassifier {
-    private static final String MODEL_FILE = "hey_ssafy_32000.tflite";
+    private static final String MODEL_FILE = "trigger_word_detection_model_B32_lr5e-5_pat30.tflite";
     private Interpreter tflite;
     private int inputHeight;
     private int inputWidth;
     private int inputChannels;
+
     public AudioClassifier(Context context) {
         try {
             tflite = new Interpreter(loadModelFile(context, MODEL_FILE));
@@ -32,49 +34,65 @@ public class AudioClassifier {
             Log.d("AudioClassifier", "Model Input Shape: " + Arrays.toString(inputShape));
 
             // 입력 텐서의 길이에 따라 height, width, channels 설정
-            inputHeight = inputShape[1];  // 16000 샘플 길이
-            inputWidth = 1;  // 샘플이므로 1
+            //inputHeight = inputShape[1];  // 16000 샘플 길이
+            //inputWidth = 1;  // 샘플이므로 1
+            inputHeight = 128;
+            inputWidth = 126;
             inputChannels = 1;  // 채널 값도 1로 설정
         } catch (IOException e) {
             Log.e("AudioClassifier", "Error loading model", e);
         }
     }
 
-    // 입력 버퍼로 들어오는 값을 통해 분류를 수행하는 메소드
-    public float[] classify(ByteBuffer inputBuffer) {
-        // 결과를 담을 버퍼 준비 (1차원 8개의 분류 값)
+    public float[] classify(float[][] spectrogram) {
+        // 스펙트로그램의 차원을 (1, time_steps, n_mels) 형태로 맞추기
+        float[][][] expandedSpectrogram = new float[1][spectrogram.length][spectrogram[0].length];
+        for (int i = 0; i < spectrogram.length; i++) {
+            for (int j = 0; j < spectrogram[0].length; j++) {
+                expandedSpectrogram[0][i][j] = spectrogram[i][j];
+            }
+        }
+        System.out.println(expandedSpectrogram.length);
+        System.out.println(expandedSpectrogram[0].length);
+        System.out.println(expandedSpectrogram[0][0].length);
         float[][] outputBuffer = new float[1][1];
 
-        // 모델 실행 전 입력 shape 확인
-        Object[] inputs = new Object[]{inputBuffer};
-        Map<Integer, Object> outputs = new HashMap<>();
-        outputs.put(0, outputBuffer);
 
-        // 모델 실행
-        tflite.runForMultipleInputsOutputs(inputs, outputs);
-
-        float[] result = outputBuffer[0];
-
-        return result;
+// 모델 실행
+        try {
+            tflite.run(expandedSpectrogram, outputBuffer);
+        } catch (Exception e) {
+            e.printStackTrace(); // 오류가 발생하면 스택 트레이스를 출력합니다.
+        }
+        return outputBuffer[0];
     }
 
-     //오디오 데이터를 ByteBuffer로 변환하는 메소드
-    public ByteBuffer createInputBuffer(float[] audioData) {
 
-        // 입력 버퍼 생성 (4 bytes per float * 16000 samples * 1 channel)
-        ByteBuffer inputBuffer = ByteBuffer.allocateDirect(4 * inputHeight * inputWidth * inputChannels);
+    // 오디오 데이터를 ByteBuffer로 변환하는 메서드
+    public float[][] createInputBuffer(float[] audioData) {
+        // Mel-spectrogram 생성
 
-        inputBuffer.order(ByteOrder.nativeOrder());
+        int nMels = 128;
+        int inputWidth = 126; // 예시로 가정한 가로 길이 (time_steps)
+        float[][] spectrogram = new float[nMels][inputWidth];
+        float[][] ret = new float[inputWidth][nMels];
 
-        // 오디오 데이터를 버퍼에 넣기
-        for (float value : audioData) {
-            inputBuffer.putFloat(value);
+        // FFT로 간단히 변환하고 log-scale을 적용하는 코드
+        FloatFFT_1D fft = new FloatFFT_1D(audioData.length);
+        fft.realForward(audioData);
+
+        for (int i = 0; i < nMels; i++) {
+            for (int j = 0; j < inputWidth; j++) {
+                spectrogram[i][j] = (float) Math.log10(1 + Math.abs(audioData[j % audioData.length]));  // 단순화된 로그 변환
+            }
         }
 
-        // 버퍼 위치를 처음으로 되돌리기
-        inputBuffer.rewind();
-
-        return inputBuffer;
+        for (int i = 0; i < inputWidth; i++) {
+            for (int j = 0; j < nMels; j++) {
+                ret[i][j] = spectrogram[j][i]; // 단순화된 로그 변환
+            }
+        }
+        return ret;
     }
 //
 //    public ByteBuffer createInputBuffer(float[] audioData) {

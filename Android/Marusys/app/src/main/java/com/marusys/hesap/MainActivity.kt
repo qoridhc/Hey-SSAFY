@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
     private val updateMemoryRunnable = object : Runnable {
         override fun run() {
             mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
@@ -61,7 +62,6 @@ class MainActivity : ComponentActivity() {
         // 화면 갔다가 돌아왔을 때 받기위함
         realTimeRecordAndClassify()
         handler.post(updateMemoryRunnable)
-
     }
 
     override fun onPause() {
@@ -86,9 +86,9 @@ class MainActivity : ComponentActivity() {
     private var isListening = false
 
     fun realTimeRecordAndClassify() {
-        val sampleRate = 16000
-        val windowSize = 32000  // 2초 분량의 샘플 (32000개)
-        val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
+        val sampleRate = 32000
+        val windowSize = 64000  // 2초 분량의 샘플 (32000개)
+        val stepSize = 16000     // 0.5초 분량의 샘플 (겹치는 구간)
 
         val bufferSize = AudioRecord.getMinBufferSize(
             sampleRate,
@@ -128,7 +128,8 @@ class MainActivity : ComponentActivity() {
                 return@Thread
             }
 
-            val audioBuffer = ShortArray(bufferSize / 2) // 1초 버퍼
+            val audioBuffer = ShortArray(bufferSize / 2)
+
             val slidingWindowBuffer = FloatArray(windowSize)  // 2초 버퍼
             var bufferPosition = 0
 
