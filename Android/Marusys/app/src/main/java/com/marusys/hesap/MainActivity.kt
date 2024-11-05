@@ -7,11 +7,14 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.marusys.hesap.feature.MemoryUsageManager
 import com.marusys.hesap.presentation.screen.AudioScreen
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import java.util.Arrays
@@ -20,6 +23,8 @@ import java.util.concurrent.LinkedBlockingQueue
 class MainActivity : ComponentActivity() {
     // 여러 페이지에서 사용하는 값을 관리하는 viewModel
     private val mainViewModel = MainViewModel()
+    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var memoryUsageManager: MemoryUsageManager
 
     // 분류할 라벨들 -> 모델 학습 시 사용한 라벨
 
@@ -31,31 +36,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 오디오 녹음 권한이 있는지 확인
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // 권한이 없으면 요청 메서드 실행
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.RECORD_AUDIO),
-                1
-            )
-        }else{
-            realTimeRecordAndClassify()
-        }
+        checkAndRequestPermissions()
+        // 메모리 사용량 관리자 초기화
+        initializeMemoryUsageManager()
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
-                recordButtons = { recordAndClassify() }
+                recordButtons = {recordAndClassify()}
             )
         }
     }
-<<<<<<< Updated upstream
-
-=======
-
     private val updateMemoryRunnable = object : Runnable {
         override fun run() {
             mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
@@ -74,12 +64,10 @@ class MainActivity : ComponentActivity() {
         handler.post(updateMemoryRunnable)
 
     }
-
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(updateMemoryRunnable)
     }
-
     // 권한 체크 및 요청
     private fun checkAndRequestPermissions() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
@@ -91,21 +79,15 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
->>>>>>> Stashed changes
     // ======== 음성 인식 기반 분류 ========
 
     // 호출어 인식 여부에 따라 스레드 일시 중단 시키기 위한 변수
     private var isListening = false
 
     fun realTimeRecordAndClassify() {
-        val sampleRate = 16000
-<<<<<<< Updated upstream
-        val windowSize = 16000  // 2초 분량의 샘플 (32000개)
-        val stepSize = 4000     // 0.5초 분량의 샘플 (겹치는 구간)
-=======
+        val sampleRate = 32000
         val windowSize = 32000  // 2초 분량의 샘플 (32000개)
         val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
->>>>>>> Stashed changes
 
         val bufferSize = AudioRecord.getMinBufferSize(
             sampleRate,
@@ -163,14 +145,9 @@ class MainActivity : ComponentActivity() {
                             val windowCopy = slidingWindowBuffer.clone()
                             audioQueue.put(windowCopy)  // 큐에 윈도우 데이터를 추가
 
-<<<<<<< Updated upstream
                             try {
                                 val classifier = AudioClassifier(this)
                                 val inputBuffer = classifier.createInputBuffer(slidingWindowBuffer)
-
-                                // 전처리 MFCC
-
-
                                 val results = classifier.classify(inputBuffer)
 
                                 // results[0] 값을 실시간으로 화면에 표시
@@ -194,9 +171,6 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // 슬라이딩 윈도우를 50% 이동시키기 위해 이전 데이터를 복사
-=======
-                            // 슬라이딩 윈도우 25% 이동
->>>>>>> Stashed changes
                             System.arraycopy(slidingWindowBuffer, stepSize, slidingWindowBuffer, 0, windowSize - stepSize)
                             bufferPosition = windowSize - stepSize
                         }
