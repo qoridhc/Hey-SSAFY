@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import com.marusys.hesap.presentation.screen.AudioScreen
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import java.util.Arrays
+import java.util.concurrent.LinkedBlockingQueue
 
 class MainActivity : ComponentActivity() {
     // 여러 페이지에서 사용하는 값을 관리하는 viewModel
@@ -47,11 +48,50 @@ class MainActivity : ComponentActivity() {
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
-                recordButtons = {recordAndClassify()}
+                recordButtons = { recordAndClassify() }
             )
         }
     }
+<<<<<<< Updated upstream
 
+=======
+
+    private val updateMemoryRunnable = object : Runnable {
+        override fun run() {
+            mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
+            handler.postDelayed(this, 1000) // 1초마다 업데이트
+        }
+    }
+
+    private fun initializeMemoryUsageManager() {
+        memoryUsageManager = MemoryUsageManager(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 화면 갔다가 돌아왔을 때 받기위함
+        realTimeRecordAndClassify()
+        handler.post(updateMemoryRunnable)
+
+    }
+
+    override fun onPause() {
+        super.onPause()
+        handler.removeCallbacks(updateMemoryRunnable)
+    }
+
+    // 권한 체크 및 요청
+    private fun checkAndRequestPermissions() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+            checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA),
+                1
+            )
+        }
+    }
+>>>>>>> Stashed changes
     // ======== 음성 인식 기반 분류 ========
 
     // 호출어 인식 여부에 따라 스레드 일시 중단 시키기 위한 변수
@@ -59,8 +99,13 @@ class MainActivity : ComponentActivity() {
 
     fun realTimeRecordAndClassify() {
         val sampleRate = 16000
+<<<<<<< Updated upstream
         val windowSize = 16000  // 2초 분량의 샘플 (32000개)
         val stepSize = 4000     // 0.5초 분량의 샘플 (겹치는 구간)
+=======
+        val windowSize = 32000  // 2초 분량의 샘플 (32000개)
+        val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
+>>>>>>> Stashed changes
 
         val bufferSize = AudioRecord.getMinBufferSize(
             sampleRate,
@@ -81,8 +126,10 @@ class MainActivity : ComponentActivity() {
             mainViewModel.setResultText("녹음 중...")
         }
 
+        isListening = true  // 스레드 실행 시작
+        val audioQueue = LinkedBlockingQueue<FloatArray>()  // 슬라이딩 윈도우 데이터를 담는 큐
+
         Thread {
-            isListening = true  // 스레드 실행 시작
             val audioRecord = AudioRecord(
                 MediaRecorder.AudioSource.MIC,
                 sampleRate,
@@ -98,8 +145,8 @@ class MainActivity : ComponentActivity() {
                 return@Thread
             }
 
-            val audioBuffer = ShortArray(bufferSize / 2)
-            val slidingWindowBuffer = FloatArray(windowSize)  // 1초 버퍼
+            val audioBuffer = ShortArray(bufferSize / 2) // 1초 버퍼
+            val slidingWindowBuffer = FloatArray(windowSize)  // 2초 버퍼
             var bufferPosition = 0
 
             audioRecord.startRecording()
@@ -112,10 +159,11 @@ class MainActivity : ComponentActivity() {
                         slidingWindowBuffer[bufferPosition] = audioBuffer[i] / 32768.0f
                         bufferPosition++
 
-                        // 슬라이딩 윈도우가 채워졌으면 호출어 검출을 수행
                         if (bufferPosition >= windowSize) {
-                            bufferPosition = 0
+                            val windowCopy = slidingWindowBuffer.clone()
+                            audioQueue.put(windowCopy)  // 큐에 윈도우 데이터를 추가
 
+<<<<<<< Updated upstream
                             try {
                                 val classifier = AudioClassifier(this)
                                 val inputBuffer = classifier.createInputBuffer(slidingWindowBuffer)
@@ -146,6 +194,9 @@ class MainActivity : ComponentActivity() {
                             }
 
                             // 슬라이딩 윈도우를 50% 이동시키기 위해 이전 데이터를 복사
+=======
+                            // 슬라이딩 윈도우 25% 이동
+>>>>>>> Stashed changes
                             System.arraycopy(slidingWindowBuffer, stepSize, slidingWindowBuffer, 0, windowSize - stepSize)
                             bufferPosition = windowSize - stepSize
                         }
@@ -154,6 +205,34 @@ class MainActivity : ComponentActivity() {
             }
             audioRecord.stop()
             audioRecord.release()
+        }.start()
+
+        // 분류 스레드
+        Thread {
+            try {
+                val classifier = AudioClassifier(this)
+                while (isListening) {
+                    val slidingWindowData = audioQueue.take()  // 큐에서 데이터 가져오기
+                    val inputBuffer = classifier.createInputBuffer(slidingWindowData)
+                    val results = classifier.classify(inputBuffer)
+
+                    runOnUiThread {
+                        mainViewModel.setResultText("확률값: ${results[0]}")
+                    }
+
+                    if (results[0] >= 0.8f) {
+                        runOnUiThread {
+                            showSuccessDialog()
+                        }
+                        isListening = false
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "분류 중 오류 발생", e)
+                runOnUiThread {
+                    mainViewModel.setResultText("분류 중 오류가 발생했습니다: " + e.message)
+                }
+            }
         }.start()
     }
 
