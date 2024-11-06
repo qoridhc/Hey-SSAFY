@@ -19,6 +19,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.app.ActivityCompat
@@ -37,7 +38,7 @@ import kotlinx.coroutines.launch
 import java.util.Arrays
 
 class MainActivity : ComponentActivity() {
-    private val mainViewModel = MainViewModel()
+    private val mainViewModel: MainViewModel by viewModels()
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var memoryUsageManager: MemoryUsageManager
     private var currentDialog: AlertDialog? = null
@@ -60,8 +61,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // 오디오 녹음 권한이 있는지 확인
         checkAndRequestPermissions()
-        // 메모리 사용량 관리자 초기화
-        initializeMemoryUsageManager()
+
+        // ViewModel의 메모리 사용량 업데이트 시작
+        mainViewModel.updateMemoryUsage(this)
+
         // BroadcastReceiver 등록
         LocalBroadcastManager.getInstance(this).registerReceiver(
             receiver,
@@ -90,15 +93,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val updateMemoryRunnable = object : Runnable {
-        override fun run() {
-            mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
-            handler.postDelayed(this, 1000) // 1초마다 업데이트
-        }
-    }
+//    private val updateMemoryRunnable = object : Runnable {
+//        override fun run() {
+//            mainViewModel.setMemoryText(memoryUsageManager.getMemoryUsage())
+//            handler.postDelayed(this, 1000) // 1초마다 업데이트
+//        }
+//    }
 
     private fun initializeMemoryUsageManager() {
-        memoryUsageManager = MemoryUsageManager(this)
+        memoryUsageManager = MemoryUsageManager()
     }
 
 
@@ -106,13 +109,13 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // 화면 갔다가 돌아왔을 때 받기위함
         realTimeRecordAndClassify()
-        handler.post(updateMemoryRunnable)
+//        handler.post(updateMemoryRunnable)
 
     }
 
     override fun onPause() {
         super.onPause()
-        handler.removeCallbacks(updateMemoryRunnable)
+//        handler.removeCallbacks(updateMemoryRunnable)
     }
 
     override fun onDestroy() {
@@ -139,7 +142,7 @@ class MainActivity : ComponentActivity() {
 //    private var isListening = false // 위로 이동
 
     private fun realTimeRecordAndClassify() {
-        val sampleRate = 32000
+        val sampleRate = 16000
         val windowSize = 32000  // 2초 분량의 샘플 (32000개)
         val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
 
@@ -205,7 +208,10 @@ class MainActivity : ComponentActivity() {
 
                                 // results[0] 값을 실시간으로 화면에 표시
                                 runOnUiThread {
-                                    mainViewModel.setResultText("확률값: ${results[0]}")
+                                    val percentage = String.format("%.2f%%", results[0] * 100)
+
+                                    mainViewModel.setResultText("확률값: $percentage")
+//                                    handler.post(updateMemoryRunnable)
                                 }
 
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
@@ -265,7 +271,7 @@ class MainActivity : ComponentActivity() {
                 stopAudioService() // 서비스 종료
                 VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword)
             }
-            .setCancelable(false)
+            .setCancelable(true)
             .create()
 
         // 다이얼로그 참조 저장
