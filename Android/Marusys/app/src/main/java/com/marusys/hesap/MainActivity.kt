@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
-    // ======== 음성 인식 기반 분류 ========
 
+    // ======== 음성 인식 기반 분류 ========
     // 호출어 인식 여부에 따라 스레드 일시 중단 시키기 위한 변수
     private var isListening = false
 
@@ -306,81 +306,5 @@ class MainActivity : ComponentActivity() {
             }
         }).start()
     }
-
-
-// ======== wav 파일 기반 분류 ========
-    //    public void classifyWavFile(String fileName) throws IOException {
-    //        float[] audioData = readWavFile(fileName);
-    //
-    //        // 데이터 길이가 16000인지 확인하고 필요시 조정
-    //        if (audioData.length != 16000) {
-    //            float[] resizedAudio = new float[16000];
-    //            if (audioData.length > 16000) {
-    //                System.arraycopy(audioData, 0, resizedAudio, 0, 16000);
-    //            } else {
-    //                System.arraycopy(audioData, 0, resizedAudio, 0, audioData.length);
-    //            }
-    //            audioData = resizedAudio;
-    //        }
-    //
-    //        AudioClassifier classifier = new AudioClassifier(this);
-    //        ByteBuffer inputBuffer = classifier.createInputBuffer(audioData);
-    //        float[] results = classifier.classify(inputBuffer);
-    //
-    //        // 소프트맥스 적용
-    //        float max = Float.NEGATIVE_INFINITY;
-    //        for (float result : results) {
-    //            if (result > max) max = result;
-    //        }
-    //
-    //        float sum = 0;
-    //        float[] softmaxResults = new float[results.length];
-    //        for (int i = 0; i < results.length; i++) {
-    //            softmaxResults[i] = (float) Math.exp(results[i] - max);
-    //            sum += softmaxResults[i];
-    //        }
-    //
-    //        for (int i = 0; i < softmaxResults.length; i++) {
-    //            softmaxResults[i] /= sum;
-    //        }
-    //
-    //        // 결과 출력
-    //        StringBuilder resultText = new StringBuilder();
-    //        for (int i = 0; i < results.length; i++) {
-    //            resultText.append(labels[i])  // 여기는 String.format 필요 없음
-    //                    .append(" : ")
-    //                    .append(String.format("%.4f", results[i]))  // %로 포맷
-    //                    .append("(")
-    //                    .append(String.format("%.2f", softmaxResults[i] * 100))  // %로 포맷
-    //                    .append("%)\n");
-    //        }
-    //
-    //        resultTextView.setText(resultText.toString());
-    //        Log.d("resultText", resultText.toString());
-    //    }
-    //
-    //    public float[] readWavFile(String fileName) throws IOException {
-    //        InputStream inputStream = getAssets().open(fileName);
-    //        byte[] data = new byte[inputStream.available()];
-    //        inputStream.read(data);
-    //        inputStream.close();
-    //
-    //        // Skip WAV header (44 bytes)
-    //        int headerSize = 44;
-    //        int audioDataSize = (data.length - headerSize) / 2; // 16-bit audio = 2 bytes per sample
-    //        float[] audioData = new float[audioDataSize];
-    //
-    //        // Convert bytes to float and normalize
-    //        for (int i = 0; i < audioDataSize; i++) {
-    //            // Convert 2 bytes to 16-bit integer
-    //            short sample = (short) ((data[headerSize + 2*i + 1] << 8) | (data[headerSize + 2*i] & 0xFF));
-    //            // Normalize to -1.0 to 1.0
-    //            audioData[i] = sample / 32768.0f;  // 32768 = 2^15 (maximum value for 16-bit audio)
-    //        }
-    //
-    //        return audioData;
-    //    }
 }
-
-
 
