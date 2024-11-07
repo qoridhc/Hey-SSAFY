@@ -150,6 +150,62 @@ public class ResnetClassifier {
     }
 
 
+    // ======== wav 파일 기반 분류 ========
+
+    public float[] byteBufferToFloatArray(ByteBuffer buffer) {
+        buffer.rewind(); // 버퍼 위치를 처음으로 이동
+        int floatCount = buffer.remaining() / Float.BYTES;
+        float[] floatArray = new float[floatCount];
+        buffer.asFloatBuffer().get(floatArray); // FloatBuffer로 변환 후 float[]로 가져오기
+        return floatArray;
+    }
+
+    public ByteBuffer readWavFile(String fileName) throws IOException {
+        InputStream inputStream = context.getAssets().open(fileName);
+        byte[] data = new byte[inputStream.available()];
+        inputStream.read(data);
+        inputStream.close();
+
+        // Skip WAV header (44 bytes)
+        int headerSize = 44;
+        int audioDataSize = (data.length - headerSize) / 2; // 16-bit audio = 2 bytes per sample
+        float[] audioData = new float[audioDataSize];
+
+        // Convert bytes to float and normalize
+        for (int i = 0; i < audioDataSize; i++) {
+            // Convert 2 bytes to 16-bit integer
+            short sample = (short) ((data[headerSize + 2*i + 1] << 8) | (data[headerSize + 2*i] & 0xFF));
+            // Normalize to -1.0 to 1.0
+            audioData[i] = sample / 32768.0f;  // 32768 = 2^15 (maximum value for 16-bit audio)
+        }
+
+        AudioClassifier classifier = new AudioClassifier(context);
+
+        // 입력 데이터를 분류 모델의 형식에 맞게 변환
+        ByteBuffer inputBuffer = classifier.createInputBuffer(audioData);
+
+        return inputBuffer;
+    }
+
+    public String classifyFromFile(String assetFilePath) {
+        try {
+            // 파일 데이터를 ByteBuffer로 변환
+            ByteBuffer audioData = readWavFile(assetFilePath);
+
+            float[] audioBuffer = byteBufferToFloatArray(audioData);
+
+            // float[]를 이용하여 분류
+            String results = classifyAudio(audioBuffer);
+
+            return results;
+
+            // 결과 레이블 반환
+        } catch (IOException e) {
+
+            Log.e("ResnetClassifier", "Error reading file for classification", e);
+            return "_unknown_";
+        }
+    }
 
 
 }
