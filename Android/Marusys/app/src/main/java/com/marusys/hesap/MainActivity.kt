@@ -17,6 +17,7 @@ import com.marusys.hesap.MainActivity.Constants.RECORDING_TIME
 import com.marusys.hesap.MainActivity.Constants.SAMPLE_RATE
 import com.marusys.hesap.MainActivity.Constants.STEP_SIZE
 import com.marusys.hesap.MainActivity.Constants.THRESHOLD
+import com.marusys.hesap.MainActivity.Constants.TRIGGER_WORD
 import com.marusys.hesap.MainActivity.Constants.WINDOW_SIZE
 import com.marusys.hesap.feature.MemoryUsageManager
 import com.marusys.hesap.presentation.screen.AudioScreen
@@ -40,6 +41,9 @@ class MainActivity : ComponentActivity() {
         const val WINDOW_SIZE = SAMPLE_RATE * RECORDING_TIME  // 전체 window size
         const val STEP_SIZE = WINDOW_SIZE / 2     // sliding window 사이즈 (겹치는 구간)
 
+        // Resnet Softmax 분류를 위한 트리거워드 설정
+        const val TRIGGER_WORD = "hey_ssafy"
+        
         // 라벨 정의 (모델 학습 시 사용한 라벨에 맞게 수정)
         val LABELS = arrayOf("unknown", "ssafy")
     }
@@ -49,7 +53,7 @@ class MainActivity : ComponentActivity() {
         RESNET, CNN
     }
 
-    // 모델 타입을 결정하는 변수 (초기값 설정 가능)
+    // 모델 타입을 결정하는 변수 [ CNN , ResNet , RNN] 선택
     var MODEL_TYPE: ModelType = ModelType.RESNET
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,7 +112,7 @@ class MainActivity : ComponentActivity() {
     private fun startRecordingWithModel() {
         when (MODEL_TYPE) {
             ModelType.RESNET -> resnetRealTimeRecordAndClassify()
-            ModelType.CNN -> resnetRealTimeRecordAndClassify()
+            ModelType.CNN -> cnnRealTimeRecordAndClassify()
         }
     }
 
@@ -212,6 +216,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun resnetRealTimeRecordAndClassify() {
+
         val bufferSize = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -270,7 +275,9 @@ class MainActivity : ComponentActivity() {
                                 val classifier = ResnetClassifier(this)
                                 val results = classifier.classifyAudio(slidingWindowBuffer)
                                 val accuracy = ThresholdUtil.checkTrigger(results)
-
+                                val resultLabel = classifier.getLabel(results)
+                                        
+                                        
                                 val resultText = StringBuilder()
                                 val percentage = String.format("%.2f%%", accuracy * 100)
 
@@ -286,7 +293,7 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
-                                if (accuracy >= THRESHOLD) {
+                                if (accuracy >= THRESHOLD &&  resultLabel.equals(TRIGGER_WORD)) {
                                     runOnUiThread {
                                         showSuccessDialog()
                                     }
@@ -311,6 +318,7 @@ class MainActivity : ComponentActivity() {
             audioRecord.release()
         }.start()
     }
+
 
 
     // 호출어 인식 성공 시 보여줄 팝업
