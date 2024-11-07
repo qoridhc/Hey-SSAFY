@@ -1,5 +1,8 @@
 package com.marusys.hesap;
 
+import static com.marusys.hesap.MainActivity.Constants.RECORDING_TIME;
+import static com.marusys.hesap.MainActivity.Constants.WINDOW_SIZE;
+
 import android.content.Context;
 import android.util.Log;
 
@@ -14,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 public class ResnetClassifier {
 
@@ -29,17 +33,20 @@ public class ResnetClassifier {
             "right",
             "stop",
             "up",
-            "yes"
+            "yes",
+            "hey_ssafy"
     };
 
     private final Context context;
     private final Module resnetModel, melModel;
 
-    private static final String MEL_MODEL_PATH = "logmel_model.ptl";
-    private static final String RESNET_MODEL_PATH = "resnet_model.ptl";
+    private static final String MEL_MODEL_PATH = "logmel_optimized_16000_2.ptl";
+    private static final String RESNET_MODEL_PATH = "model_optimized_16000_2.ptl";
 
     private static final long INPUT_HEIGHT = 40;
-    private static final long INPUT_WIDTH = 101;
+
+    // Resnet 모델 입력에 맞게 WIDTH 설정 (16000 주파수 1초 음성 : 101 / 2초 201)
+    private static final long INPUT_WIDTH = RECORDING_TIME == 1 ? 101 : 201;
 
     public ResnetClassifier(Context context) throws IOException {
         // 모델 파일을 로드합니다.
@@ -49,41 +56,38 @@ public class ResnetClassifier {
         melModel = LiteModuleLoader.load(assetFilePath(context, MEL_MODEL_PATH));
     }
 
-    public String classifyAudio(float[] audioData) {
+    public float[] classifyAudio(float[] audioData) {
         try {
 
-            // 1. 오디오 데이터를 입력 텐서로 변환
-            Tensor audioTensor = Tensor.fromBlob(audioData, new long[]{1, 16000});
+            // 1. 오디오 데이터 적합한 입력 텐서 형태로로 변환
+            Tensor audioTensor = Tensor.fromBlob(audioData, new long[]{1, WINDOW_SIZE});
 
             // 2. Mel spectrogram 계산 -> pytorch 모델 기반 변환 (melModel.ptl)
             Tensor melSpecTensor = melModel.forward(IValue.from(audioTensor)).toTensor();
 
-            //long[] shape = melSpecTensor.shape();
-            //Log.d("MelSpecTensor Shape", Arrays.toString(shape));
 
             // 3. 데이터를 추출한 후 필요한 모양으로 새로운 텐서를 생성
             float[] melSpecData = melSpecTensor.getDataAsFloatArray();
-            //Log.e("convertToMel", Arrays.toString(melSpecData));
 
             // Resnet 모델 입력 형태에 맞게 변환
             Tensor reshapedMelTensor = Tensor.fromBlob(melSpecData, new long[]{1L, 1L, INPUT_HEIGHT, INPUT_WIDTH});
 
+            // IValue를 Tensor로 변환하고, shape를 확인하는 예제
+            Tensor tensor = IValue.from(reshapedMelTensor).toTensor();
+
             // 4. BCResNet으로 분류
             Tensor outputTensor = resnetModel.forward(IValue.from(reshapedMelTensor)).toTensor();
 
-            // 5. 결과 변환
-            float[] result = outputTensor.getDataAsFloatArray();
-
-            // 6. 레이블 반환
-            return getLabel(result);
+            // 5. 결과 변환 (각 Label 확률값을 담는 배열)
+            return outputTensor.getDataAsFloatArray();
 
         } catch (Exception e) {
             Log.e("AudioProcessor", "Error classifying audio", e);
-            return "_unknown_";
+            return null;
         }
     }
 
-    private String getLabel(float[] result) {
+    public String getLabel(float[] result) {
 
         // 결과 배열에서 최대값의 인덱스를 찾습니다
         int maxIndex = 0;
@@ -147,14 +151,14 @@ public class ResnetClassifier {
     }
 
     // WAV 파일을 읽어 분류 결과 레이블을 반환하는 메서드
-    public String classifyFromFile(String assetFilePath) {
+    public float[] classifyFromFile(String assetFilePath) {
         try {
             ByteBuffer audioDataBuffer = readWavFile(assetFilePath);
             float[] audioBuffer = byteBufferToFloatArray(audioDataBuffer);
             return classifyAudio(audioBuffer);
         } catch (IOException e) {
             Log.e("ResnetClassifier", "Error reading file for classification", e);
-            return "_unknown_";
+            return null;
         }
     }
 
