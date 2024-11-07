@@ -86,9 +86,9 @@ class MainActivity : ComponentActivity() {
     private var isListening = false
 
     fun realTimeRecordAndClassify() {
-        val sampleRate = 32000
-        val windowSize = 64000  // 2초 분량의 샘플 (32000개)
-        val stepSize = 16000     // 0.5초 분량의 샘플 (겹치는 구간)
+        val sampleRate = 16000
+        val windowSize = 32000  // 2초 분량의 샘플 (32000개)
+        val stepSize = 8000     // 0.5초 분량의 샘플 (겹치는 구간)
 
         val bufferSize = AudioRecord.getMinBufferSize(
             sampleRate,

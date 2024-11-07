@@ -3,6 +3,7 @@ import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.util.Log;
 import org.tensorflow.lite.Interpreter;
+import org.tensorflow.lite.flex.FlexDelegate;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -12,7 +13,7 @@ import java.util.Arrays;
 
 
 public class AudioClassifier {
-    private static final String MODEL_FILE = "trigger_word_detection_model_MelIntoLayer_sr32000_B32_lr5e-5_pat30.tflite";
+    private static final String MODEL_FILE = "trigger_word_detection_model_MelIntoLayer_sr16000_B32_lr5e-5_pat30.tflite";
     private Interpreter tflite;
     private int inputHeight;
     private int inputWidth;
@@ -20,17 +21,18 @@ public class AudioClassifier {
 
     public AudioClassifier(Context context) {
         try {
-            tflite = new Interpreter(loadModelFile(context, MODEL_FILE));
+             Interpreter.Options options = new Interpreter.Options();
+            options.addDelegate(new FlexDelegate());
+
+            tflite = new Interpreter(loadModelFile(context, MODEL_FILE), options);
 
             // 입력 텐서의 형식 출력
             int[] inputShape = tflite.getInputTensor(0).shape();
             Log.d("AudioClassifier", "Model Input Shape: " + Arrays.toString(inputShape));
 
             // 입력 텐서의 길이에 따라 height, width, channels 설정
-            //inputHeight = inputShape[1];  // 16000 샘플 길이
-            //inputWidth = 1;  // 샘플이므로 1
-            inputHeight = 128;
-            inputWidth = 126;
+            inputHeight = inputShape[1];  // 16000 샘플 길이
+            inputWidth = 1;  // 샘플이므로 1
             inputChannels = 1;  // 채널 값도 1로 설정
         } catch (IOException e) {
             Log.e("AudioClassifier", "Error loading model", e);
@@ -45,11 +47,6 @@ public class AudioClassifier {
         }
         float[][] outputBuffer = new float[1][1];
 
-        for(int i=0;i<1000;i++){
-            System.out.print(audioData[i] + " " );
-        }
-        System.out.println();
-
         // 모델 실행
         try {
             tflite.run(expandedAudioData, outputBuffer);
@@ -57,13 +54,6 @@ public class AudioClassifier {
             e.printStackTrace(); // 오류가 발생하면 스택 트레이스를 출력합니다.
         }
         return outputBuffer[0];
-    }
-
-
-    // 오디오 데이터를 Mel Spectrogram으로 변환하고 전치하여 반환하는 메서드
-    public float[][] createInputBuffer(float[] audioData) {
-        float [][] transposedSpectrogram = new float[1][1];
-        return transposedSpectrogram;
     }
 
 
