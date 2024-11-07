@@ -84,12 +84,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-    // === resnet
-
-
     // ======== 음성 인식 기반 분류 ========
-
     // 호출어 인식 여부에 따라 스레드 일시 중단 시키기 위한 변수
     private var isListening = false
 
@@ -204,6 +199,90 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    // 모델을 사용하여 음성 데이터를 분류하는 함수
+    fun resnetClassify() {
+        val sampleRate = 16000   // 샘플 레이트 16KHz(16000Hz)
+        val recordingTime = 1    // 녹음 시간 (1초)
+        val totalSamples = sampleRate * recordingTime
+
+        // AudioRecord 초기화 및 녹음 설정
+        val bufferSize = AudioRecord.getMinBufferSize(
+            sampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
+
+        // 녹음 권한 확인
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+
+        // UI에 녹음 상태 표시
+        runOnUiThread {
+            mainViewModel.setResultText("녹음 중...")
+        }
+
+        // 백그라운드 스레드에서 녹음 및 분류 실행
+        Thread(Runnable {
+            val audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                sampleRate,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,
+                bufferSize
+            )
+
+            if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
+                Log.e("MainActivity", "AudioRecord 초기화 실패")
+                runOnUiThread {
+                    mainViewModel.setResultText("녹음 초기화 실패")
+                }
+                return@Runnable
+            }
+
+            val audioBuffer = ShortArray(totalSamples) // 녹음 샘플을 저장할 버퍼
+
+            // 녹음 시작
+            audioRecord.startRecording()
+            audioRecord.read(audioBuffer, 0, audioBuffer.size)
+            audioRecord.stop()
+            audioRecord.release()
+
+            // short 배열을 float 배열로 변환 (정규화 포함)
+            val audioData = FloatArray(16000)
+
+            for (i in audioData.indices) {
+                audioData[i] = audioBuffer[i] / 32768.0f  // 16비트 정규화
+            }
+
+
+            // 입력 데이터 준비 완료
+            try {
+                // ResnetClassifier 초기화
+                val classifier = ResnetClassifier(this)
+
+//                val audioBuffer: FloatArray = classifier.byteBufferToFloatArray(audioData)
+
+                // float[]를 이용하여 분류
+                val result: String = classifier.classifyAudio(audioData)
+
+//                // 결과 출력
+                val resultText = StringBuilder()
+                resultText.append(result)
+
+                val finalResult = resultText.toString()
+                runOnUiThread {
+                    mainViewModel.setResultText(finalResult)
+                }
+                Log.d("resnet : ", result)
+            } catch (e: Exception) {
+                Log.e("MainActivity", "분류 중 오류 발생", e)
+                runOnUiThread {
+                    mainViewModel.setResultText("분류 중 오류가 발생했습니다: " + e.message)
+                }
+            }
+        }).start()
+    }
 
 
     fun resnetFromFile(){
