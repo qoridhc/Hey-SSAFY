@@ -168,6 +168,7 @@ class BCResNets(nn.Module):
             nn.Conv2d(self.c[-2], self.c[-1], 1, bias=False),
             nn.BatchNorm2d(self.c[-1]),
             nn.ReLU(True),
+            #nn.AvgPool2d(kernel_size=(1, 101)),
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Conv2d(self.c[-1], self.num_classes, 1),
         )

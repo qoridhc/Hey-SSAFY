@@ -7,8 +7,8 @@ from glob import glob
 import shutil
 import requests
 import tarfile
-
-
+from convert import save_model
+import torch.nn as nn
 import numpy as np
 import torch
 import torchaudio
@@ -176,10 +176,12 @@ class Preprocess:
         return x
 
 
-class LogMel:
+class LogMel(nn.Module):
     def __init__(
         self, device, sample_rate=SR, hop_length=160, win_length=480, n_fft=512, n_mels=40
     ):
+        super(LogMel, self).__init__()
+
         self.mel = torchaudio.transforms.MelSpectrogram(
             sample_rate=sample_rate,
             hop_length=hop_length,
@@ -192,6 +194,7 @@ class LogMel:
     def __call__(self, x):
         self.mel = self.mel.to(self.device)
         output = (self.mel(x) + 1e-6).log()
+        print(output.shape)
         return output
 
 

@@ -12,7 +12,6 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
-
 from bcresnet import BCResNets
 from utils import DownloadDataset, Padding, Preprocess, SpeechCommand, SplitDataset
 
@@ -31,11 +30,14 @@ class Trainer:
         parser.add_argument(
             "--tau", default=1, help="model size", type=float, choices=[1, 1.5, 2, 3, 6, 8]
         )
+        # 모델 저장 경로를 위한 인자 추가
         parser.add_argument("--gpu", default=0, help="gpu device id", type=int)
         parser.add_argument("--download", help="download data", action="store_true")
         args = parser.parse_args()
         self.__dict__.update(vars(args))
         self.device = torch.device("cuda:%d" % self.gpu if torch.cuda.is_available() else "cpu")
+        print(self.device)
+
         self._load_data()
         self._load_model()
 
@@ -46,11 +48,11 @@ class Trainer:
         Trains the model and presents the train/test progress.
         """
         # train hyperparameters
-        total_epoch = 200
+        total_epoch = 10
         warmup_epoch = 5
         init_lr = 1e-1
         lr_lower_limit = 0
-
+        best_acc = 0.0  # 최고 정확도 추적
         # optimizer
         optimizer = torch.optim.SGD(self.model.parameters(), lr=0, weight_decay=1e-3, momentum=0.9)
         n_step_warmup = len(self.train_loader) * warmup_epoch
@@ -77,8 +79,11 @@ class Trainer:
 
                 inputs, labels = sample
                 inputs = inputs.to(self.device)
+                #print(inputs.shape)
                 labels = labels.to(self.device)
                 inputs = self.preprocess_train(inputs, labels, augment=True)
+                #print(inputs.shape)  # 훈련 코드에서 shape 출력
+                #print(inputs.shape)
                 outputs = self.model(inputs)
                 loss = F.cross_entropy(outputs, labels)
                 loss.backward()
@@ -91,6 +96,10 @@ class Trainer:
                 self.model.eval()
                 valid_acc = self.Test(self.valid_dataset, self.valid_loader, augment=True)
                 print("valid acc: %.3f" % (valid_acc))
+
+                # 최고 정확도 모델 저장
+                if valid_acc > best_acc:
+                    best_acc = valid_acc
 
         test_acc = self.Test(self.test_dataset, self.test_loader, augment=False)  # official testset
         print("test acc: %.3f" % (test_acc))
@@ -187,7 +196,57 @@ class Trainer:
         print("model: BC-ResNet-%.1f on data v0.0%d" % (self.tau, self.ver))
         self.model = BCResNets(int(self.tau * 8)).to(self.device)
 
+    def save_for_mobile(self):
+            """
+            Save the model in a format optimized for mobile.
+            """
+            # 학습 완료 후 모델을 CPU로 이동
+            self.model.eval()
+            self.model.to('cpu')
+
+            # CPU에서의 입력 샘플 생성
+            input_sample = torch.randn(1,1, 40, 101)
+
+            # TorchScript로 변환
+            traced_model = torch.jit.trace(self.model, input_sample, strict=True, check_trace=True)
+
+            with torch.no_grad():
+                output= traced_model(input_sample)
+                print(f"Input shape: {input_sample.shape}")
+                print(f"Output shape: {output.shape}")
+
+            traced_model.to('cpu')  # CPU로 변환된 모델 저장
+            traced_model.save("model_scripted.pt")  # 일반 TorchScript 모델 저장
+
+
+            # 모바일 최적화 적용
+            optimized_model = optimize_for_mobile(traced_model)
+            optimized_model._save_for_lite_interpreter("model_optimized.ptl")  # 모바일 최적화 모델 저장
+
+            print("\nOptimized model saved as model_optimized.ptl")
 
 if __name__ == "__main__":
     _trainer = Trainer()
     _trainer()
+
+    feature = _trainer.preprocess_test.feature
+    feature.device = 'cpu'  # device 속성 변경
+    feature.mel = feature.mel.to('cpu')
+    feature = feature.to('cpu')
+    
+    input_sample = torch.randn(1, 16000)
+    
+    try:
+        print("모델이 성공적으로 저장되었습니다.")
+        traced_model = torch.jit.trace(feature, input_sample)
+        traced_model.save("logmel_scripted.pt")
+        
+        from torch.utils.mobile_optimizer import optimize_for_mobile
+        optimized_model = optimize_for_mobile(traced_model)
+        optimized_model._save_for_lite_interpreter("logmel_optimized.ptl")
+        print("Optimized model saved as logmel_optimized.ptl")
+        
+    except Exception as e:
+        print(f"오류 발생: {str(e)}")
+
+    _trainer.save_for_mobile()
