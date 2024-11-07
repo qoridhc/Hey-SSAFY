@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AudioClassifier {
-    private static final String MODEL_FILE = "hey_ssafy_32000.tflite";
+    private static final String MODEL_FILE = "hey_ssafy_1.tflite";
     private Interpreter tflite;
     private int inputHeight;
     private int inputWidth;
