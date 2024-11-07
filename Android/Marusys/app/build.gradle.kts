@@ -78,4 +78,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation("be.tarsos.dsp:core:2.5")
 }
