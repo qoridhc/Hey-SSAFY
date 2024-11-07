@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AudioScreen(
                 viewModel = mainViewModel,
-                recordButtons = {recordAndClassify()}
+                recordButtons = {}
             )
         }
     }
@@ -164,8 +164,24 @@ class MainActivity : ComponentActivity() {
                 val classifier = AudioClassifier(this)
                 while (isListening) {
                     val slidingWindowData = audioQueue.take()  // 큐에서 데이터 가져오기
-                    val inputBuffer = classifier.createInputBuffer(slidingWindowData)
-                    val results = classifier.classify(inputBuffer)
+
+                    var isExist = false
+                    for (data in slidingWindowData) {
+                        if(data.toFloat() != 0f){
+                            isExist = true
+                            print(data)
+                            print(",")
+                        }
+                    }
+
+                    if (isExist){
+                        println("OO Data has entered! OO")
+                    } else {
+                        println("XX Data has NOT entered XX")
+                    }
+
+//                    val inputBuffer = classifier.createInputBuffer(slidingWindowData)
+                    val results = classifier.classify(slidingWindowData)
 
                     runOnUiThread {
                         mainViewModel.setResultText("확률값: ${results[0]}")
@@ -175,6 +191,7 @@ class MainActivity : ComponentActivity() {
                         runOnUiThread {
                             showSuccessDialog()
                         }
+                        audioQueue.clear()
                         isListening = false
                     }
                 }
@@ -198,113 +215,6 @@ class MainActivity : ComponentActivity() {
             }
             .setCancelable(false)
             .show()
-    }
-
-    // 현재는 버튼 리스너 기반 -> 추후에 실시간 음성인식 코드 구현
-    fun recordAndClassify() {
-        // 샘플 레이트 16KHz(16000Hz)
-
-        val sampleRate = 16000
-
-        // 녹음 설정 시간 ( 1초로 설정 )
-        val recordingTime = 1
-
-        // 샘플 갯수 계산
-        val totalSamples = sampleRate * recordingTime
-
-        // 최소 버퍼 크기를 얻어옴
-        val bufferSize = AudioRecord.getMinBufferSize(
-            sampleRate,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-
-        // 녹음 권한이 있는지 재확인
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-
-        // 녹음 상태 표시해주기 (스레드 별도 설정)
-        runOnUiThread {
-            mainViewModel.setResultText("녹음 중...")
-        }
-
-        // 백그라운드 스레드에서 녹음 및 분류 실행
-
-        Thread(Runnable {
-            val audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,  // 마이크에서 오디오 소스 가져옴
-                sampleRate,  // 샘플레이트 설정 (16kHz)
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize // 버퍼 크기 설정
-            )
-            // AudioRecord 초기화 실패 시 로그 출력 및 종료
-            if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
-                Log.e("MainActivity", "AudioRecord 초기화 실패")
-                runOnUiThread {
-                    mainViewModel.setResultText("녹음 초기화 실패")
-                }
-                return@Runnable
-            }
-
-            // 녹음할 샘플을 저장할 버퍼 생성
-            val audioBuffer = ShortArray(totalSamples)
-
-            // 녹음 시작
-            audioRecord.startRecording()
-
-            // 녹음 데이터 읽기
-            audioRecord.read(audioBuffer, 0, audioBuffer.size)
-
-            // 녹음 종료 & 리소스 해제
-            audioRecord.stop()
-            audioRecord.release()
-
-            Log.d("원시 데이터", audioBuffer.contentToString())
-
-            // short 배열을 float 배열로 변환 (정규화 포함)
-            val audioData = FloatArray(16000)
-            for (i in audioData.indices) {
-                // 16비트 데이터 정규화 (-1.0 ~ 1.0 값으로 맞춰줌)
-                audioData[i] = audioBuffer[i] / 32768.0f
-            }
-
-            // 입력 음성 데이터 값 로그
-            Log.d("audioData", audioData.contentToString())
-            try {
-                // 자체 AudioClassifier를 사용하여 분류
-                val classifier = AudioClassifier(this)
-
-                // 입력 데이터를 분류 모델의 형식에 맞게 변환
-                val inputBuffer = classifier.createInputBuffer(audioData)
-                val results = classifier.classify(inputBuffer)
-
-                Log.d("@@@@@@", Arrays.toString(results));
-
-                // 결과 문자열 생성 (결과 값 포맷팅)
-                val resultText = StringBuilder()
-
-                resultText.append(Arrays.toString(results));
-
-                val finalResult = resultText.toString()
-
-                // 결과 출력
-                runOnUiThread {
-                    mainViewModel.setResultText(finalResult)
-                }
-                Log.d("resultText", finalResult)
-            } catch (e: Exception) {
-                Log.e("MainActivity", "분류 중 오류 발생", e)
-                runOnUiThread {
-                    mainViewModel.setResultText("분류 중 오류가 발생했습니다: " + e.message)
-                }
-            }
-        }).start()
     }
 }
 
