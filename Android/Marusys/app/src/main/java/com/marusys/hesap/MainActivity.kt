@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
         const val SAMPLE_RATE = 16000   // 샘플 레이트 16KHz (16000Hz)
         const val RECORDING_TIME = 2    // 녹음 시간 (2초)
         const val WINDOW_SIZE = SAMPLE_RATE * RECORDING_TIME  // 전체 window size
-        const val STEP_SIZE = SAMPLE_RATE / 2     // sliding window 사이즈 (겹치는 구간)
+        const val STEP_SIZE = WINDOW_SIZE / 2     // sliding window 사이즈 (겹치는 구간)
 
         // 라벨 정의 (모델 학습 시 사용한 라벨에 맞게 수정)
         val LABELS = arrayOf("unknown", "ssafy")
@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // 모델 타입을 결정하는 변수 (초기값 설정 가능)
-    var MODEL_TYPE: ModelType = ModelType.CNN
+    var MODEL_TYPE: ModelType = ModelType.RESNET
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,13 +107,13 @@ class MainActivity : ComponentActivity() {
     // 사용자에게 모델 타입을 선택할 수 있게 해주는 메서드
     private fun startRecordingWithModel() {
         when (MODEL_TYPE) {
-            ModelType.RESNET -> cnnRealTimeRecordAndClassify()
-            ModelType.CNN -> cnnRealTimeRecordAndClassify()
+            ModelType.RESNET -> resnetRealTimeRecordAndClassify()
+            ModelType.CNN -> resnetRealTimeRecordAndClassify()
         }
     }
 
     // ======== 음성 인식 기반 분류 ========
-    
+
     // 호출어 인식 여부에 따라 스레드 일시 중단 시키기 위한 변수
     private var isListening = false
 
@@ -271,10 +271,18 @@ class MainActivity : ComponentActivity() {
                                 val results = classifier.classifyAudio(slidingWindowBuffer)
                                 val accuracy = ThresholdUtil.checkTrigger(results)
 
+                                val resultText = StringBuilder()
+                                val percentage = String.format("%.2f%%", accuracy * 100)
+
+                                resultText.append(classifier.getLabel(results))
+                                resultText.append(" : " )
+                                resultText.append(percentage)
+
+                                val finalResult = resultText.toString()
+
                                 // 정확도 값을 실시간으로 화면에 표시
                                 runOnUiThread {
-                                    val percentage = String.format("%.2f%%", accuracy * 100)
-                                    mainViewModel.setResultText("확률값: $percentage")
+                                    mainViewModel.setResultText(finalResult)
                                 }
 
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
@@ -399,7 +407,7 @@ class MainActivity : ComponentActivity() {
             }
         }).start()
     }
-    
+
     fun resnetFromFile(){
         val classifier = ResnetClassifier(this)
 
