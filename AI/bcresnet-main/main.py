@@ -48,7 +48,7 @@ class Trainer:
         Trains the model and presents the train/test progress.
         """
         # train hyperparameters
-        total_epoch = 10
+        total_epoch = 6
         warmup_epoch = 5
         init_lr = 1e-1
         lr_lower_limit = 0
@@ -205,7 +205,7 @@ class Trainer:
             self.model.to('cpu')
 
             # CPU에서의 입력 샘플 생성
-            input_sample = torch.randn(1,1, 40, 101)
+            input_sample = torch.randn(1,1, 40, 201) # > 1,1, 40, 101에서 수정
 
             # TorchScript로 변환
             traced_model = torch.jit.trace(self.model, input_sample, strict=True, check_trace=True)
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     feature.mel = feature.mel.to('cpu')
     feature = feature.to('cpu')
     
-    input_sample = torch.randn(1, 16000)
+    input_sample = torch.randn(1, 32000)
     
     try:
         print("모델이 성공적으로 저장되었습니다.")

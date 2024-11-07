@@ -28,11 +28,12 @@ label_dict = {
     "stop": 9,
     "up": 10,
     "yes": 11,
+    "hey_ssafy":12 # 추가
 }
 print("labels:\t", label_dict)
 sample_per_cls_v1 = [1854, 258, 257]
 sample_per_cls_v2 = [3077, 371, 408]
-SR = 16000
+SR = 16000 # 16000 -> 32000 변경
 
 
 def ScanAudioFiles(root_dir, ver):
@@ -125,7 +126,7 @@ class Preprocess:
             n_fft=n_fft,
             n_mels=n_mels,
         )
-        self.sample_len = sample_rate
+        self.sample_len = sample_rate*2 # 2초 데이터 이므로 데이터 수정 sample_rate -> sample_rate * 2
         self.specaug = specaug
         self.device = device
         if self.specaug:
@@ -149,7 +150,8 @@ class Preprocess:
                 )
                 noise = random.choice(self.background_noise).to(self.device)
                 sample_loc = random.randint(0, noise.shape[-1] - self.sample_len)
-                noise = noise_amp * noise[:, sample_loc : sample_loc + SR]
+                #noise = noise_amp * noise[:, sample_loc : sample_loc + SR]
+                noise = noise_amp * noise[:, sample_loc : sample_loc + SR*2] ############ 2초 데이터 이므로 수정
 
                 if is_train:
                     x_shift = int(np.random.uniform(-0.1, 0.1) * SR)
@@ -202,7 +204,7 @@ class Padding:
     """zero pad to have 1 sec len"""
 
     def __init__(self):
-        self.output_len = SR
+        self.output_len = SR * 2
 
     def __call__(self, x):
         pad_len = self.output_len - x.shape[-1]
@@ -234,7 +236,7 @@ def make_empty_audio(loc, num):
         os.mkdir(loc)
     for i in range(num):
         path = os.path.join(loc, "%s.wav" % str(i))
-        zeros = torch.zeros([1, SR])  # 1 sec long.
+        zeros = torch.zeros([1, SR * 2])  # 1 sec long. -> SR -> SR*2 수정 2초 데이터
         torchaudio.save(path, zeros, SR)
 
 
