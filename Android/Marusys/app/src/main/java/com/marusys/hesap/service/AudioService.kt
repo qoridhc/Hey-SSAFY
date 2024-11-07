@@ -45,12 +45,10 @@ class AudioService : Service() {
         classifier = AudioClassifier(this)  // AudioClassifier 초기화
         // 카메라 초기화
         initializeCamera()
-        initializeSpeechRecognizer()
         // SpeechRecognizer 시작
-//        voiceEngine = AndroidVoiceEngine(this, engineCallback)
+        initializeSpeechRecognizer()
         // 포 그라운드 시작
 //        startForeground(NOTIFICATION_ID, createNotification())
-//        voiceEngine.startHotwordDetection()
     }
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -154,5 +152,4 @@ class AudioService : Service() {
             cameraManager.setTorchMode(id, on)
         }
     }
-
 }

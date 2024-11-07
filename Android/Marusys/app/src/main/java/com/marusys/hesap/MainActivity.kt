@@ -13,15 +13,22 @@ import android.hardware.camera2.CameraManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.findViewTreeLifecycleOwner
@@ -34,6 +41,7 @@ import com.marusys.hesap.feature.VoiceStateManager
 import com.marusys.hesap.presentation.screen.AudioScreen
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import com.marusys.hesap.service.AudioService
+import com.marusys.hesap.service.OverlayService
 import kotlinx.coroutines.launch
 import java.util.Arrays
 
@@ -41,7 +49,8 @@ class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var memoryUsageManager: MemoryUsageManager
-    private var currentDialog: AlertDialog? = null
+//    private var currentDialog: AlertDialog? = null
+    private val OVERLAY_PERMISSION_REQUEST_CODE = 1
 
     // AudioService에서 방송하는걸 MainActivity에서 받아서 객체? (정확한 명칭 모름) 로 정의
     private val receiver = object : BroadcastReceiver() {
@@ -52,7 +61,7 @@ class MainActivity : ComponentActivity() {
                 Log.d("MainActivity", "Received text: $recognizedText")
 
                 // 현재 표시 중인 다이얼로그가 있다면 메시지 업데이트
-                currentDialog?.setMessage(recognizedText)
+//                currentDialog?.setMessage(recognizedText)
             }
         }
     }
@@ -61,7 +70,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // 오디오 녹음 권한이 있는지 확인
         checkAndRequestPermissions()
-
+        // 오버레이 권한 체크 및 요청
+        checkOverlayPermission()
         // ViewModel의 메모리 사용량 업데이트 시작
         mainViewModel.updateMemoryUsage(this)
 
@@ -86,10 +96,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         setContent {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
             AudioScreen(
                 viewModel = mainViewModel,
                 recordButtons = { realTimeRecordAndClassify() }
             )
+            }
         }
     }
 
@@ -97,6 +112,18 @@ class MainActivity : ComponentActivity() {
         memoryUsageManager = MemoryUsageManager()
     }
 
+    private fun checkOverlayPermission() {
+        if (!Settings.canDrawOverlays(this)) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName"))
+            startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE)
+        } else {
+            val intent = Intent(this, OverlayService::class.java).apply {
+                action = "SHOW_OVERLAY"
+            }
+            startService(intent)
+        }
+    }
 
     override fun onResume() {
         super.onResume()
@@ -107,12 +134,26 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
     }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == OVERLAY_PERMISSION_REQUEST_CODE) {
+            if (Settings.canDrawOverlays(this)) {
+                val intent = Intent(this, OverlayService::class.java).apply {
+                    action = "SHOW_OVERLAY"
+                }
+                startService(intent)
+            } else {
+                // 사용자가 권한을 거부했을 때의 처리
+                Toast.makeText(this, "오버레이 권한이 필요합니다", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onDestroy() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
-        currentDialog?.dismiss()
-        currentDialog = null
+//        currentDialog?.dismiss()
+//        currentDialog = null
     }
 
     // 권한 체크 및 요청
@@ -208,7 +249,11 @@ class MainActivity : ComponentActivity() {
                                     runOnUiThread {
                                         // 호출어 감지 -> AudioService 시작
                                         startAudioService() // 서비스 시작
-                                        if (currentDialog == null){ showSuccessDialog()} // dialog 창 오픈
+//                                        if (currentDialog == null){ showSuccessDialog()} // dialog 창 오픈
+                                        val overlayIntent = Intent(this, OverlayService::class.java)
+                                        overlayIntent.action = "SHOW_OVERLAY"
+                                        overlayIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                        startService(overlayIntent)
                                     }
                                     VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting)
                                     break  // 루프 종료
@@ -245,6 +290,7 @@ class MainActivity : ComponentActivity() {
 //        ContextCompat.startForegroundService(this, serviceIntent)
         startService(serviceIntent)
     }
+
     // 서비스 종료
     private fun stopAudioService() {
         val serviceIntent = Intent(this, AudioService::class.java)
@@ -264,10 +310,10 @@ class MainActivity : ComponentActivity() {
             .create()
 
         // 다이얼로그 참조 저장
-            currentDialog = dialog
+//            currentDialog = dialog
 
        dialog.setOnDismissListener {
-            currentDialog = null
+//            currentDialog = null
            stopAudioService()
         }
 

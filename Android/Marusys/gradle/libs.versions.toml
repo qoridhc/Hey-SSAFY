@@ -13,6 +13,8 @@ constraintlayout = "2.1.4"
 coreKtx = "1.13.1"
 uiAndroid = "1.7.4"
 core = "2.5"
+lifecycleService = "2.8.6"
+uiToolingPreviewAndroid = "1.7.4"
 
 [libraries]
 accompanist-themeadapter-material3 = { module = "com.google.accompanist:accompanist-themeadapter-material3", version.ref = "accompanistThemeadapterMaterial3" }
@@ -30,6 +32,8 @@ material3 = { module = "androidx.compose.material3:material3" }
 runtime = { module = "androidx.compose.runtime:runtime" }
 ui-android = { group = "androidx.compose.ui", name = "ui-android", version.ref = "uiAndroid" }
 core = { group = "be.tarsos.dsp", name = "core", version.ref = "core" }
+lifecycle-service = { group = "androidx.lifecycle", name = "lifecycle-service", version.ref = "lifecycleService" }
+ui-tooling-preview-android = { group = "androidx.compose.ui", name = "ui-tooling-preview-android", version.ref = "uiToolingPreviewAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

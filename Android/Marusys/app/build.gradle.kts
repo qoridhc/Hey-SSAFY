@@ -49,13 +49,16 @@ composeCompiler {
 dependencies {
     // Compose
     implementation(platform(libs.compose.bom))
-    implementation(libs.ui.android)
+    implementation(libs.activity.compose)
     androidTestImplementation(platform(libs.compose.bom))
     implementation(libs.runtime)
     implementation(libs.core.ktx)
-    implementation(libs.activity.compose)
     implementation(libs.material3)
     implementation(libs.accompanist.themeadapter.material3)
+    implementation(libs.ui.android)
+    implementation(libs.lifecycle.service)
+    implementation(libs.ui.tooling.preview.android)
+
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     // 텐서플로 의존성
