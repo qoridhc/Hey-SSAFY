@@ -9,6 +9,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
+
         applicationId = "com.marusys.hesap"
         minSdk = 31
         targetSdk = 34
@@ -16,6 +17,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
     }
 
     buildTypes {
@@ -64,6 +66,10 @@ dependencies {
 
     // 스펙토그램 변환을 위한 의존성
     implementation("com.github.wendykierp:JTransforms:3.1")
+
+    // 파이토치 의존성
+    implementation ("org.pytorch:pytorch_android_lite:1.12.1")
+    implementation ("org.pytorch:pytorch_android_torchvision_lite:1.10.0")
 
     implementation(libs.appcompat)
     implementation(libs.material)
