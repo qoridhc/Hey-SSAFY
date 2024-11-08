@@ -154,7 +154,7 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
-                                if (results[0] >= 0.8f) {
+                                if (results[0] >= 0.9f) {
                                     runOnUiThread {
                                         showSuccessDialog()
                                     }
@@ -179,8 +179,6 @@ class MainActivity : ComponentActivity() {
             audioRecord.release()
         }.start()
     }
-
-
 
     /*
         // ======== 음성 인식 기반 분류 ========
