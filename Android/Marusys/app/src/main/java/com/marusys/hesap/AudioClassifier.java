@@ -17,24 +17,20 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AudioClassifier {
-    private static final String MODEL_FILE = "hey_ssafy_v2.tflite";
+    private static final String MODEL_FILE = "trigger_word_detection_model_MelIntoLayer_sr16000_B32_lr5e-5_pat30.tflite";
     private Interpreter tflite;
     private int inputHeight;
     private int inputWidth;
     private int inputChannels;
     public AudioClassifier(Context context) {
         try {
-            tflite = new Interpreter(loadModelFile(context, MODEL_FILE));
 
+            tflite = new Interpreter(loadModelFile(context, MODEL_FILE));
             // 입력 텐서의 형식 출력
             int[] inputShape = tflite.getInputTensor(0).shape();
-//            Log.d("AudioClassifier", "Model Input Shape: " + Arrays.toString(inputShape));
-
-            // 입력 텐서의 길이에 따라 height, width, channels 설정
             inputHeight = inputShape[1];  // 16000 샘플 길이
             inputWidth = 1;  // 샘플이므로 1
             inputChannels = 1;  // 채널 값도 1로 설정
-
         } catch (IOException e) {
             Log.e("AudioClassifier", "Error loading model", e);
         }
@@ -42,10 +38,8 @@ public class AudioClassifier {
 
     // 입력 버퍼로 들어오는 값을 통해 분류를 수행하는 메소드
     public float[] classify(ByteBuffer inputBuffer) {
-        // 결과를 담을 버퍼 준비 (1차원 8개의 분류 값)
         float[][] outputBuffer = new float[1][1];
 
-        // 모델 실행 전 입력 shape 확인
         Object[] inputs = new Object[]{inputBuffer};
         Map<Integer, Object> outputs = new HashMap<>();
         outputs.put(0, outputBuffer);
@@ -53,17 +47,30 @@ public class AudioClassifier {
         // 모델 실행
         tflite.runForMultipleInputsOutputs(inputs, outputs);
 
-        float[] result = outputBuffer[0];
+        return outputBuffer[0];
+    }
 
-        return result;
+    public float[] classify(float[] audioData) {
+
+        float[][] expandedAudioData = new float[1][audioData.length];
+        for (int i = 0; i < audioData.length; i++) {
+            expandedAudioData[0][i] = audioData[i];
+        }
+        float[][] outputBuffer = new float[1][1];
+
+        // 모델 실행
+        try {
+            tflite.run(expandedAudioData, outputBuffer);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return outputBuffer[0];
     }
 
     // 오디오 데이터를 ByteBuffer로 변환하는 메소드
     public ByteBuffer createInputBuffer(float[] audioData) {
-
         // 입력 버퍼 생성 (4 bytes per float * 16000 samples * 1 channel)
         ByteBuffer inputBuffer = ByteBuffer.allocateDirect(4 * inputHeight * inputWidth * inputChannels);
-
         inputBuffer.order(ByteOrder.nativeOrder());
 
         // 오디오 데이터를 버퍼에 넣기
@@ -73,7 +80,6 @@ public class AudioClassifier {
 
         // 버퍼 위치를 처음으로 되돌리기
         inputBuffer.rewind();
-
         return inputBuffer;
     }
 
