@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 
 public class ResnetClassifier {
 
@@ -40,8 +39,8 @@ public class ResnetClassifier {
     private final Context context;
     private final Module resnetModel, melModel;
 
-    private static final String MEL_MODEL_PATH = "logmel_optimized_16000_2.ptl";
-    private static final String RESNET_MODEL_PATH = "model_optimized_16000_2.ptl";
+    private static final String MEL_MODEL_PATH = "mel_spectogram_convert_model.ptl";
+    private static final String RESNET_MODEL_PATH = "trigger_word_detection_model_with_ResNet.ptl";
 
     private static final long INPUT_HEIGHT = 40;
 
