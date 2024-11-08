@@ -28,7 +28,8 @@ label_dict = {
     "stop": 9,
     "up": 10,
     "yes": 11,
-    "hey_ssafy":12 # 추가
+    "hey_ssafy":12, # 추가
+    "others":13
 }
 print("labels:\t", label_dict)
 sample_per_cls_v1 = [1854, 258, 257]
