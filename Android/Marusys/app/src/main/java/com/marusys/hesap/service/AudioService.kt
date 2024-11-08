@@ -92,7 +92,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         }
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
-
     }
     // 음성녹음 초기화
     private fun initializeSpeechRecognizer() {
@@ -116,7 +115,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         override fun onResults(results: Bundle?) {
             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             matches?.firstOrNull()?.let { command ->
-                executeCommand(command)
+                if (executeCommand(command)) { stopListening()}
             }
             Log.e(TAG,"results $matches")
             val intent = Intent("SPEECH_RECOGNITION_RESULT")
@@ -202,7 +201,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     }
     private fun stopListening() {
         val intent = Intent(this, AudioService::class.java )
-        stopService(intent)
 //        speechRecognizer.stopListening()
 //        speechRecognizer.destroy()
         overlayView?.let {
@@ -211,6 +209,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         }
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
+        stopService(intent)
     }
     // 손전등 on off
     private fun toggleFlashlight(on: Boolean) {
