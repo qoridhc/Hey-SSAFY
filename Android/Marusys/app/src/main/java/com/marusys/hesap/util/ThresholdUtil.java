@@ -32,10 +32,13 @@ public class ThresholdUtil {
     // Threshold 검사 함수
     public static double checkTrigger(float[] values) {
         double[] softmaxValues = calculateSoftmax(values);
-        double triggerValue = softmaxValues[softmaxValues.length - 1]; // 마지막 값이 호출어
 
-        Log.e("triggerValue", String.valueOf(triggerValue));
+        // 가장 높은 소프트맥스 값을 가진 인덱스 찾기
+        double maxSoftmaxValue = -1.0;
+        for (double value : softmaxValues) {
+            if (value > maxSoftmaxValue) maxSoftmaxValue = value;
+        }
 
-        return triggerValue;
+        return maxSoftmaxValue;
     }
 }
