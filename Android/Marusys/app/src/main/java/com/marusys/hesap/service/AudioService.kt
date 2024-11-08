@@ -190,13 +190,15 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         }
     }
 
-    private fun executeCommand(command: String) {
+    private fun executeCommand(command: String) : Boolean {
+        var executeCommant = true
         when {
             // 명령어 하드 코딩
             command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
             command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
+            else -> executeCommant = false
         }
-        stopListening()
+        return executeCommant
     }
     private fun stopListening() {
         val intent = Intent(this, AudioService::class.java )
