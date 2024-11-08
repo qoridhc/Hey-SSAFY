@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var memoryUsageManager: MemoryUsageManager
     private var currentDialog: AlertDialog? = null
-
+    private var isRecording = false // 녹음 중인지 여부 확인 플래그
     // 모델 타입
     enum class ModelType {
         RESNET, CNN, GRU
@@ -94,15 +94,23 @@ class MainActivity : ComponentActivity() {
             IntentFilter("SPEECH_RECOGNITION_RESULT")
         )
 
+        Log.e("","On Create 실행")
         // 상태 관찰, 이걸 통해 관리해도 됨
         lifecycleScope.launch {
             VoiceStateManager.voiceState.collect { state ->
                 when (state) {
                     is VoiceRecognitionState.WaitingForHotword -> {
                         Log.e("","WaitingForHotword 들어왔음")
-                        startRecordingWithModel()
-                    }
 
+                        if (!isRecording) {  // 녹음 중복 실행 방지
+                            Log.e("","isRecord = false")
+                            isRecording = true
+                            startRecordingWithModel()
+                        }
+                    }
+                    is VoiceRecognitionState.HotwordDetecting -> {
+                        Log.e("","HotwordDetecting 들어왔음")
+                    }
                     else -> {
                         // 다른 상태 처리
                     }
@@ -113,6 +121,7 @@ class MainActivity : ComponentActivity() {
             AudioScreen(viewModel = mainViewModel)
         }
     }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -229,15 +238,13 @@ class MainActivity : ComponentActivity() {
                             bufferPosition = 0
 
                             try {
-//                                val audioData = captureAudio() // 오디오 캡처 함수
                                 val classifier = AudioClassifier(this)
                                 val inputBuffer = classifier.createInputBuffer(slidingWindowBuffer)
                                 val results = classifier.classify(inputBuffer)
 
-                                // results[0] 값을 실시간으로 화면에 표시
+
                                 runOnUiThread {
                                     val percentage = String.format("%.2f%%", results[0] * 100)
-
                                     mainViewModel.setResultText("확률값: $percentage")
                                 }
 
@@ -257,6 +264,7 @@ class MainActivity : ComponentActivity() {
                                     mainViewModel.setResultText("분류 중 오류가 발생했습니다: " + e.message)
                                 }
                             }
+
                             // 슬라이딩 윈도우를 50% 이동시키기 위해 이전 데이터를 복사
                             System.arraycopy(
                                 slidingWindowBuffer,
@@ -320,6 +328,7 @@ class MainActivity : ComponentActivity() {
 
             // 실시간으로 데이터를 읽어들여 모델로 전달
             while (VoiceStateManager.voiceState.value == VoiceRecognitionState.WaitingForHotword) {
+                Log.e("MainActivity", "Classify 실행중")
                 val readSize = audioRecord.read(audioBuffer, 0, audioBuffer.size)
                 if (readSize > 0) {
                     for (i in 0 until readSize) {
@@ -345,7 +354,7 @@ class MainActivity : ComponentActivity() {
                                 if (results[0] >= THRESHOLD) {
                                     runOnUiThread {
                                         // 호출어 감지 -> AudioService 시작
-                                        startAudioService() // 서비스 시작
+                                        //startAudioService() // 서비스 시작
                                         if (currentDialog == null) { showSuccessDialog() } // dialog 창 오픈
                                     }
                                     VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
@@ -507,8 +516,8 @@ class MainActivity : ComponentActivity() {
             .setPositiveButton("확인") { it, _ ->
                 it.dismiss()
                 stopAudioService() // 서비스 종료
+                isRecording = false
                 VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword)
-                startRecordingWithModel()  // 스레드 재시작
             }
             .setCancelable(true)
             .create()

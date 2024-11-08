@@ -3,16 +3,13 @@ package com.marusys.hesap;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.util.Log;
-
 import org.tensorflow.lite.Interpreter;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 

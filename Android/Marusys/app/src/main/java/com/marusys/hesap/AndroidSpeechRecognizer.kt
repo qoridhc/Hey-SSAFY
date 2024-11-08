@@ -93,6 +93,7 @@ class AndroidSpeechRecognizer(
     override fun destroy() {
         speechRecognizer.destroy()
     }
+
     fun getErrorMessage(error : Int) : String{
     val errorMessage = when (error) {
         SpeechRecognizer.ERROR_AUDIO -> "오디오 녹음 오류"
