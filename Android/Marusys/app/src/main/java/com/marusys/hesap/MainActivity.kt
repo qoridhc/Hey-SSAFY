@@ -14,6 +14,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.app.ActivityCompat
@@ -98,6 +99,7 @@ class MainActivity : ComponentActivity() {
             VoiceStateManager.voiceState.collect { state ->
                 when (state) {
                     is VoiceRecognitionState.WaitingForHotword -> {
+                        Log.e("","WaitingForHotword 들어왔음")
                         startRecordingWithModel()
                     }
 
@@ -111,11 +113,25 @@ class MainActivity : ComponentActivity() {
             AudioScreen(viewModel = mainViewModel)
         }
     }
-
-    private fun initializeMemoryUsageManager() {
-        memoryUsageManager = MemoryUsageManager()
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            1 -> {
+                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    // 모든 권한이 승인된 경우
+                    startRecordingWithModel()
+                } else {
+                    // 권한이 거부된 경우
+                    Toast.makeText(this, "권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+                    // 필요에 따라 사용자에게 권한의 필요성을 설명하고 다시 요청하거나 앱을 종료할 수 있습니다.
+                }
+            }
+        }
     }
-
 
     override fun onResume() {
         super.onResume()
@@ -141,6 +157,8 @@ class MainActivity : ComponentActivity() {
                 arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA),
                 1
             )
+        }else {
+            startRecordingWithModel()
         }
     }
 
