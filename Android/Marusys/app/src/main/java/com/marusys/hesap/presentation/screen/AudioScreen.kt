@@ -44,7 +44,7 @@ fun AudioScreen(
         Spacer(modifier = Modifier.padding(16.dp))
         Button(
             // 버튼 클릭 리스너 설정 -> 버튼 클릭 시 작동
-            onClick = { recordButtons() },
+            onClick = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
