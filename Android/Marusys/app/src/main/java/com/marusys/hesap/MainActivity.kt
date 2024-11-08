@@ -43,8 +43,7 @@ class MainActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var memoryUsageManager: MemoryUsageManager
     private var currentDialog: AlertDialog? = null
-    private var isListening = false
-
+    private var isRecording = false // 녹음 중인지 여부 확인 플래그
     // 모델 타입
     enum class ModelType {
         RESNET, CNN, GRU
@@ -66,6 +65,7 @@ class MainActivity : ComponentActivity() {
         // 라벨 정의 (모델 학습 시 사용한 라벨에 맞게 수정)
         val LABELS = arrayOf("unknown", "ssafy")
     }
+
 
     // AudioService에서 인식한 음성 명령어를 MainActivity에서 받는 콜백함수
     private val receiver = object : BroadcastReceiver() {
@@ -93,16 +93,17 @@ class MainActivity : ComponentActivity() {
             receiver,
             IntentFilter("SPEECH_RECOGNITION_RESULT")
         )
+
         // 상태 관찰, 이걸 통해 관리해도 됨
         lifecycleScope.launch {
             VoiceStateManager.voiceState.collect { state ->
                 when (state) {
                     is VoiceRecognitionState.WaitingForHotword -> {
-                        Log.e("","호출어 대기 상태")
-                        Log.e("","isListening = $isListening")
-                        if (!isListening) {
-                            isListening = true
-                            Log.e("","lifecycle 에서 startRecord 하기")
+                        Log.e("","WaitingForHotword 들어왔음")
+
+                        if (!isRecording) {  // 녹음 중복 실행 방지
+                            Log.e("","isRecord = false")
+                            isRecording = true
                             startRecordingWithModel()
                         }
                     }
@@ -122,6 +123,7 @@ class MainActivity : ComponentActivity() {
             AudioScreen(viewModel = mainViewModel)
         }
     }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -178,6 +180,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
     // ======== 음성 인식 기반 분류 ========
     fun cnnRealTimeRecordAndClassify() {
         val bufferSize = AudioRecord.getMinBufferSize(
@@ -232,11 +235,10 @@ class MainActivity : ComponentActivity() {
                         if (bufferPosition >= WINDOW_SIZE) {
 //                            bufferPosition = 0
                             try {
-//                                val audioData = captureAudio() // 오디오 캡처 함수
                                 val classifier = AudioClassifier(this)
                                 val inputBuffer = classifier.createInputBuffer(slidingWindowBuffer)
                                 val results = classifier.classify(inputBuffer)
-//                                val results = audioClassifier.classify(slidingWindowBuffer)
+
                                 // results[0] 값을 실시간으로 화면에 표시
                                 runOnUiThread {
                                     val percentage = String.format("%.2f%%", results[0] * 100)
@@ -246,10 +248,11 @@ class MainActivity : ComponentActivity() {
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
                                 if (results[0] >= THRESHOLD) {
                                     runOnUiThread {
-                                        if (currentDialog == null) { showSuccessDialog() } // dialog 창 오픈
                                         // 호출어 감지 -> AudioService 시작
                                         startAudioService() // 서비스 시작
+                                        if (currentDialog == null) { showSuccessDialog() } // dialog 창 오픈
                                     }
+                                    VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
                                     break  // 루프 종료
                                 }
                             } catch (e: Exception) {
@@ -375,6 +378,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun resnetRealTimeRecordAndClassify() {
+
         val bufferSize = AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -504,14 +508,11 @@ class MainActivity : ComponentActivity() {
             .setTitle("호출어 인식 성공")
             .setMessage("호출어가 성공적으로 인식되었습니다!")
             .setPositiveButton("확인") { it, _ ->
-                Log.e("","확인 버튼 눌렀음")
                 it.dismiss()
-                isListening = false
                 stopAudioService() // 서비스 종료
+                isRecording = false
                 currentDialog = null
-                Log.e("", " 확인 버튼 눌렀을 때 : $isListening")
                 VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword)
-//                startRecordingWithModel()  // 스레드 재시작
             }
             .setCancelable(false)
             .create()
