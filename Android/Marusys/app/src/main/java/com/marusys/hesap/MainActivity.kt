@@ -276,7 +276,7 @@ class MainActivity : ComponentActivity() {
                                     runOnUiThread {
                                         // 호출어 감지 -> AudioService 시작
                                         startAudioService() // 서비스 시작
-                                        if (currentDialog == null) { showSuccessDialog() } // dialog 창 오픈
+//                                        if (currentDialog == null) { showSuccessDialog() } // dialog 창 오픈
                                     }
                                     VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
                                     break  // 루프 종료
