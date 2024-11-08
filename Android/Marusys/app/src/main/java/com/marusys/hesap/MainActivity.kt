@@ -1,15 +1,12 @@
 package com.marusys.hesap
 
 import android.Manifest
-import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
@@ -26,14 +23,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.liveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.marusys.hesap.feature.MemoryUsageManager
 import com.marusys.hesap.feature.VoiceRecognitionState
@@ -41,9 +33,7 @@ import com.marusys.hesap.feature.VoiceStateManager
 import com.marusys.hesap.presentation.screen.AudioScreen
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import com.marusys.hesap.service.AudioService
-import com.marusys.hesap.service.OverlayService
 import kotlinx.coroutines.launch
-import java.util.Arrays
 
 class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
@@ -102,7 +92,6 @@ class MainActivity : ComponentActivity() {
             ) {
             AudioScreen(
                 viewModel = mainViewModel,
-                recordButtons = { realTimeRecordAndClassify() }
             )
             }
         }
@@ -118,10 +107,10 @@ class MainActivity : ComponentActivity() {
                 Uri.parse("package:$packageName"))
             startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE)
         } else {
-            val intent = Intent(this, OverlayService::class.java).apply {
-                action = "SHOW_OVERLAY"
-            }
-            startService(intent)
+//            val intent = Intent(this, OverlayService::class.java).apply {
+//                action = "SHOW_OVERLAY"
+//            }
+//            startService(intent)
         }
     }
 
@@ -138,10 +127,10 @@ class MainActivity : ComponentActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == OVERLAY_PERMISSION_REQUEST_CODE) {
             if (Settings.canDrawOverlays(this)) {
-                val intent = Intent(this, OverlayService::class.java).apply {
-                    action = "SHOW_OVERLAY"
-                }
-                startService(intent)
+//                val intent = Intent(this, OverlayService::class.java).apply {
+//                    action = "SHOW_OVERLAY"
+//                }
+//                startService(intent)
             } else {
                 // 사용자가 권한을 거부했을 때의 처리
                 Toast.makeText(this, "오버레이 권한이 필요합니다", Toast.LENGTH_SHORT).show()
@@ -250,10 +239,10 @@ class MainActivity : ComponentActivity() {
                                         // 호출어 감지 -> AudioService 시작
                                         startAudioService() // 서비스 시작
 //                                        if (currentDialog == null){ showSuccessDialog()} // dialog 창 오픈
-                                        val overlayIntent = Intent(this, OverlayService::class.java)
-                                        overlayIntent.action = "SHOW_OVERLAY"
-                                        overlayIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                                        startService(overlayIntent)
+//                                        val overlayIntent = Intent(this, OverlayService::class.java)
+//                                        overlayIntent.action = "SHOW_OVERLAY"
+//                                        overlayIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+//                                        startService(overlayIntent)
                                     }
                                     VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting)
                                     break  // 루프 종료

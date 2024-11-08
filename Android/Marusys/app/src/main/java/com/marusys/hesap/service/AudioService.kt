@@ -3,6 +3,7 @@ package com.marusys.hesap.service
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.PixelFormat
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.os.Bundle
@@ -13,18 +14,37 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import android.view.Gravity
+import android.view.WindowManager
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.marusys.hesap.AndroidSpeechRecognizer
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.marusys.hesap.AudioClassifier
 import com.marusys.hesap.feature.VoiceRecognitionEngine
 import com.marusys.hesap.feature.VoiceRecognitionState
 import com.marusys.hesap.feature.VoiceStateManager
 import com.marusys.hesap.presentation.components.Notification
-import com.marusys.hesap.presentation.components.Notification.Companion.NOTIFICATION_ID
+import com.marusys.hesap.presentation.components.OverlayContent
 
 private val TAG = "AudioService"
 
-class AudioService : Service() {
+class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
+
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
+
 //    private var islistening  = false  // 실시간 감지 상태를 추적하는 변수
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var recognizerIntent: Intent
@@ -35,26 +55,42 @@ class AudioService : Service() {
     private var cameraId: String? = null
     // 알림창
     private lateinit var notificationManager: Notification
-
+    // 오베리이 관련
+    private lateinit var windowManager: WindowManager
+    private var overlayView: ComposeView? = null
 
     override fun onCreate() {
         super.onCreate()
         Log.e(TAG,"오디오 서비스 시작 11111111111111111111111111")
         VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting)
+        savedStateRegistryController.performRestore(null)
+        lifecycleRegistry.currentState = Lifecycle.State.CREATED
+
         notificationManager = Notification(this)
         classifier = AudioClassifier(this)  // AudioClassifier 초기화
-        // 카메라 초기화
+        // 윈도우 매니져 서비스 시작
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        // 카메라 초기화- 손전등 관련 코드
         initializeCamera()
         // SpeechRecognizer 시작
         initializeSpeechRecognizer()
         // 포 그라운드 시작
 //        startForeground(NOTIFICATION_ID, createNotification())
     }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startListening() // 명령 인식 시작
+        return START_STICKY
+    }
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
         speechRecognizer.destroy()
+        overlayView?.let {
+            windowManager.removeView(it)
+            overlayView = null
+        }
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
 
     }
@@ -79,12 +115,8 @@ class AudioService : Service() {
     private val recognitionListener = object : RecognitionListener {
         override fun onResults(results: Bundle?) {
             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            matches?.firstOrNull()?.let { result ->
-                if (result.contains("손전등 켜", ignoreCase = true)) {
-                    toggleFlashlight(true)
-                } else if (result.contains("손전등 꺼", ignoreCase = true)) {
-                    toggleFlashlight(false)
-                }
+            matches?.firstOrNull()?.let { command ->
+                executeCommand(command)
             }
             Log.e(TAG,"results $matches")
             val intent = Intent("SPEECH_RECOGNITION_RESULT")
@@ -131,20 +163,52 @@ class AudioService : Service() {
     }
     private fun startListening() {
         speechRecognizer.startListening(recognizerIntent)
-    }
+        // 오버레이
+        if (overlayView == null) {
+            overlayView = ComposeView(this).apply {
+                setViewTreeLifecycleOwner(this@AudioService)
+                setViewTreeSavedStateRegistryOwner(this@AudioService)
 
+                setContent {
+                    OverlayContent { stopListening() }
+                }
+            }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startListening()
-        return START_STICKY
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL  // 하단 중앙에 위치
+            }
+
+            windowManager.addView(overlayView, params)
+            lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+        }
     }
 
     private fun executeCommand(command: String) {
         when {
+            // 명령어 하드 코딩
             command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
             command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
-            // 다른 명령어 처리...
         }
+        stopListening()
+    }
+    private fun stopListening() {
+        val intent = Intent(this, AudioService::class.java )
+        stopService(intent)
+//        speechRecognizer.stopListening()
+//        speechRecognizer.destroy()
+        overlayView?.let {
+            windowManager.removeView(it)
+            overlayView = null
+        }
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
     }
     // 손전등 on off
     private fun toggleFlashlight(on: Boolean) {
