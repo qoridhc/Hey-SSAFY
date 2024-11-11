@@ -86,6 +86,8 @@ class MainActivity : ComponentActivity() {
 
                 // 현재 표시 중인 다이얼로그가 있다면 메시지 업데이트
 //                currentDialog?.setMessage(recognizedText)
+                // 현재 표시 중인 윈도우 매니져가 있다면 메시지 업데이트
+                 mainViewModel.setCommandText(recognizedText)
             }
         }
     }
@@ -110,13 +112,8 @@ class MainActivity : ComponentActivity() {
             VoiceStateManager.voiceState.collect { state ->
                 when (state) {
                     is VoiceRecognitionState.WaitingForHotword -> {
-                        Log.e("","WaitingForHotword 들어왔음")
-
-//                        if (!isRecording) {  // 녹음 중복 실행 방지
-                            Log.e("","isRecord = false")
-//                            isRecording = true
+                        Log.e("","호출어 대기 상태")
                             startRecordingWithModel()
-//                        }
                     }
                     is VoiceRecognitionState.HotwordDetecting -> {
                         Log.e("","호출어 인식 상태")
@@ -236,7 +233,6 @@ class MainActivity : ComponentActivity() {
         }
 
         Thread {
-            //VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 스레드 실행 시작 isListening = true
             val audioRecord = AudioRecord(
                 MediaRecorder.AudioSource.MIC,
                 SAMPLE_RATE,
@@ -384,11 +380,8 @@ class MainActivity : ComponentActivity() {
                                         // 호출어 감지 -> AudioService 시작
                                         startAudioService() // 서비스 시작
 //                                        if (currentDialog == null){ showSuccessDialog()} // dialog 창 오픈
-//                                        val overlayIntent = Intent(this, OverlayService::class.java)
-//                                        overlayIntent.action = "SHOW_OVERLAY"
-//                                        overlayIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-//                                        startService(overlayIntent)
                                     }
+                                    VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
                                     break  // 루프 종료
                                 }
                             } catch (e: Exception) {
@@ -470,7 +463,6 @@ class MainActivity : ComponentActivity() {
                         // 슬라이딩 윈도우가 채워졌으면 호출어 검출을 수행
                         if (bufferPosition >= WINDOW_SIZE) {
                             bufferPosition = 0
-
                             try {
                                 val classifier = ResnetClassifier(this)
                                 val results = classifier.classifyAudio(slidingWindowBuffer)
@@ -497,8 +489,9 @@ class MainActivity : ComponentActivity() {
                                     runOnUiThread {
                                         // 호출어 감지 -> AudioService 시작
                                         startAudioService() // 서비스 시작
-//                                        showSuccessDialog()
+//                                        if (currentDialog == null) { showSuccessDialog() } // dialog 창 오픈
                                     }
+                                    VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
                                     break  // 루프 종료
                                 }
                             } catch (e: Exception) {
@@ -537,7 +530,7 @@ class MainActivity : ComponentActivity() {
 
     // 서비스 종료
     private fun stopAudioService() {
-        isRecording = false
+//        isRecording = false
         val serviceIntent = Intent(this, AudioService::class.java)
         stopService(serviceIntent)
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 호출어 대기
@@ -551,7 +544,7 @@ class MainActivity : ComponentActivity() {
             .setPositiveButton("확인") { it, _ ->
                 it.dismiss()
                 stopAudioService() // 서비스 종료
-                isRecording = false
+//                isRecording = false
                 currentDialog = null
                 VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword)
             }
@@ -559,10 +552,10 @@ class MainActivity : ComponentActivity() {
             .create()
 
         // 다이얼로그 참조 저장
-//            currentDialog = dialog
+            currentDialog = dialog
 
        dialog.setOnDismissListener {
-//            currentDialog = null
+            currentDialog = null
            stopAudioService()
         }
         currentDialog = dialog

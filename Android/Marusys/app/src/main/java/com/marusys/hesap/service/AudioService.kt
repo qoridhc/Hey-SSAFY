@@ -32,6 +32,7 @@ import com.marusys.hesap.feature.VoiceRecognitionState
 import com.marusys.hesap.feature.VoiceStateManager
 import com.marusys.hesap.presentation.components.Notification
 import com.marusys.hesap.presentation.components.OverlayContent
+import com.marusys.hesap.presentation.viewmodel.MainViewModel
 
 private val TAG = "AudioService"
 
@@ -45,11 +46,11 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateRegistryController.savedStateRegistry
 
-//    private var islistening  = false  // 실시간 감지 상태를 추적하는 변수
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var recognizerIntent: Intent
     private lateinit var classifier: AudioClassifier  // AudioClassifier 인스턴스
     private lateinit var voiceEngine: VoiceRecognitionEngine
+    private lateinit var mainViewModel: MainViewModel
     // 손전등 관련
     private lateinit var cameraManager: CameraManager
     private var cameraId: String? = null
@@ -61,11 +62,12 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     override fun onCreate() {
         super.onCreate()
-        Log.e(TAG,"오디오 서비스 시작 11111111111111111111111111")
+        Log.e(TAG,"오디오 서비스 시작")
         VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting)
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
 
+        mainViewModel = MainViewModel()
         notificationManager = Notification(this)
         classifier = AudioClassifier(this)  // AudioClassifier 초기화
         // 윈도우 매니져 서비스 시작
@@ -76,6 +78,8 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         initializeSpeechRecognizer()
         // 포 그라운드 시작
 //        startForeground(NOTIFICATION_ID, createNotification())
+        // 3초 있다가 종료
+        Handler(Looper.getMainLooper()).postDelayed({stopListening()},3000)
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startListening() // 명령 인식 시작
@@ -91,16 +95,25 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             overlayView = null
         }
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
+        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태2222222222222222222222222222222222222222222222222222222222222222222222222222
     }
     // 음성녹음 초기화
     private fun initializeSpeechRecognizer() {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer.setRecognitionListener(recognitionListener)
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            // FREE_FORM : 언어 모델이 자유 형식의 음성을 인식하도록 지정-> 일반적인 대화나 다양한 주제의 음성을 인식하는 데 적합
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            // 서비스를 호출하는 앱 패키지 이름을 지정 -> 인식 결과를 올바른 앱으로 반환
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+            // 반환할 최대 인식 결과 수, 가장 가능성 높은 거만
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            // 최소 밀리 세컨드 이상
+//            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 100)
+//             1초 정도 정적이 있으면 음성 인식을 완료됐을 가능성 있다고 판단
+//            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1000)
+            // 일리 세컨드 정도 완전한 침묵 = 입력 완
+//            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 100)
         }
     }
     // 카메라 초기화
@@ -112,9 +125,24 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         }
     }
     private val recognitionListener = object : RecognitionListener {
+
+        override fun onPartialResults(partialResults: Bundle?) {
+            val match = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            match?.firstOrNull()?.let { command ->
+                mainViewModel.setCommandText(command)
+            }
+            Log.e(TAG,"partialResults = $match")
+//            val intent = Intent("SPEECH_RECOGNITION_RESULT")
+//            intent.putStringArrayListExtra("matches", match)
+//            LocalBroadcastManager.getInstance(this@AudioService).sendBroadcast(intent)
+//            startListening()
+        }
+
         override fun onResults(results: Bundle?) {
+//            onPartialResults(results)
             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             matches?.firstOrNull()?.let { command ->
+                mainViewModel.setCommandText(command)
                 if (executeCommand(command)) { stopListening()}
             }
             Log.e(TAG,"results $matches")
@@ -124,10 +152,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             startListening()
         }
 
-        override fun onPartialResults(partialResults: Bundle?) {
-            val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            Log.e(TAG,"partialResults = $matches")
-        }
 
         override fun onReadyForSpeech(params: Bundle?) {
             Log.d("SpeechRecognizer", "onReadyForSpeech to listen...")
@@ -167,9 +191,8 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             overlayView = ComposeView(this).apply {
                 setViewTreeLifecycleOwner(this@AudioService)
                 setViewTreeSavedStateRegistryOwner(this@AudioService)
-
                 setContent {
-                    OverlayContent { stopListening() }
+                    OverlayContent ({ stopListening() }, mainViewModel)
                 }
             }
 
@@ -209,7 +232,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         }
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
-        stopService(intent)
+        stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료
     }
     // 손전등 on off
     private fun toggleFlashlight(on: Boolean) {

@@ -40,19 +40,7 @@ fun AudioScreen(
     ) {
         Text("모델 테스트 하기", style = MaterialTheme.typography.headlineLarge)
         // Spacer : 빈 공간 두는 것
-        Spacer(modifier = Modifier.padding(16.dp))
-        Button(
-            // 버튼 클릭 리스너 설정 -> 버튼 클릭 시 작동
-            onClick = {  },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3182F6)),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("녹음하기")
-        }
-        Spacer(modifier = Modifier.padding(16.dp))
+        Spacer(modifier = Modifier.padding(32.dp))
         Text(resultText, modifier = Modifier.weight(1f), fontSize = 32.sp)
         Spacer(modifier = Modifier.padding(16.dp))
         Text(memoryText, modifier = Modifier.weight(1f), fontSize = 32.sp)

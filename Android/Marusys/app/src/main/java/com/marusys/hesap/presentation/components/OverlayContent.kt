@@ -21,9 +21,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,11 +36,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.marusys.hesap.R
+import com.marusys.hesap.presentation.viewmodel.MainViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun OverlayContent(
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    viewModel: MainViewModel,
 ) {
+    val commandText by viewModel.commandText.collectAsState()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -63,19 +69,11 @@ fun OverlayContent(
                     .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
             ) {
                 Text(
-                    text = "헤이 싸피를 인식했습니다!",
+                    text = commandText,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .padding(vertical = 8.dp)
                 )
-//                IconButton(
-//                    onClick = onClose,
-//                    modifier = Modifier
-//                        .align(Alignment.TopEnd)
-//                        .padding(4.dp)
-//                ) {
-//                    Icon(Icons.Default.Close, contentDescription = "Close")
-//                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             Box(
