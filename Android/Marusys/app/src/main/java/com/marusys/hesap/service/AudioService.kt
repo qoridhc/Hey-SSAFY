@@ -77,9 +77,9 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         // SpeechRecognizer 시작
         initializeSpeechRecognizer()
         // 포 그라운드 시작
-//        startForeground(NOTIFICATION_ID, createNotification())
+        // startForeground(NOTIFICATION_ID, createNotification())
         // 3초 있다가 종료
-        Handler(Looper.getMainLooper()).postDelayed({stopListening()},3000)
+        Handler(Looper.getMainLooper()).postDelayed({stopListening()},10000)
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startListening() // 명령 인식 시작
@@ -95,7 +95,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             overlayView = null
         }
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태2222222222222222222222222222222222222222222222222222222222222222222222222222
+        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
     }
     // 음성녹음 초기화
     private fun initializeSpeechRecognizer() {
@@ -225,7 +225,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private fun stopListening() {
         val intent = Intent(this, AudioService::class.java )
 //        speechRecognizer.stopListening()
-//        speechRecognizer.destroy()
+        speechRecognizer.destroy()
         overlayView?.let {
             windowManager.removeView(it)
             overlayView = null
