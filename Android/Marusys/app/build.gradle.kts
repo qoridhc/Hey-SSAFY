@@ -60,7 +60,7 @@ dependencies {
     implementation(libs.ui.android)
     implementation(libs.lifecycle.service)
     implementation(libs.ui.tooling.preview.android)
-
+    implementation (libs.lifecycle.viewmodel.ktx)
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     // 텐서플로 의존성

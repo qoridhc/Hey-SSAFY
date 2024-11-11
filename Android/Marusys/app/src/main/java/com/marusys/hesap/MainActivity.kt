@@ -19,10 +19,14 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.core.app.ActivityCompat
 import com.marusys.hesap.MainActivity.Constants.RECORDING_TIME
 import com.marusys.hesap.MainActivity.Constants.SAMPLE_RATE
@@ -40,6 +44,7 @@ import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import com.marusys.hesap.util.ThresholdUtil
 import com.marusys.hesap.service.AudioService
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 
 class MainActivity : ComponentActivity() {
@@ -52,7 +57,6 @@ class MainActivity : ComponentActivity() {
     private val OVERLAY_PERMISSION_REQUEST_CODE = 1
 
     private var currentDialog: AlertDialog? = null
-    private var isRecording = false // 녹음 중인지 여부 확인 플래그
     // 모델 타입
     enum class ModelType {
         RESNET, CNN, GRU
@@ -79,15 +83,20 @@ class MainActivity : ComponentActivity() {
     // AudioService에서 인식한 음성 명령어를 MainActivity에서 받는 콜백함수
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "SPEECH_RECOGNITION_RESULT") {
-                val matches = intent.getStringArrayListExtra("matches")
-                val recognizedText = matches?.firstOrNull() ?: ""
-                Log.d("MainActivity", "Received text: $recognizedText")
-
-                // 현재 표시 중인 다이얼로그가 있다면 메시지 업데이트
-//                currentDialog?.setMessage(recognizedText)
-                // 현재 표시 중인 윈도우 매니져가 있다면 메시지 업데이트
-                 mainViewModel.setCommandText(recognizedText)
+            when (intent?.action) {
+                "SPEECH_RECOGNITION_RESULT" -> {
+                    val matches = intent.getStringArrayListExtra("matches")
+                    val recognizedText = matches?.firstOrNull() ?: ""
+                    Log.d("MainActivity", "Received text: $recognizedText")
+                    // 현재 표시 중인 다이얼로그가 있다면 메시지 업데이트
+    //                currentDialog?.setMessage(recognizedText)
+                    // 현재 표시 중인 윈도우 매니져가 있다면 메시지 업데이트
+                    mainViewModel.setCommandText(recognizedText)
+                }
+                "AUDIO_SERVICE_STATE_CHANGED" -> {
+                    val isRunning = intent.getBooleanExtra("isRunning", false)
+                    mainViewModel.setAudioServiceRunning(isRunning)
+                }
             }
         }
     }
@@ -104,7 +113,10 @@ class MainActivity : ComponentActivity() {
         // BroadcastReceiver 등록
         LocalBroadcastManager.getInstance(this).registerReceiver(
             receiver,
-            IntentFilter("SPEECH_RECOGNITION_RESULT")
+            IntentFilter().apply {
+                addAction("SPEECH_RECOGNITION_RESULT")
+                addAction("AUDIO_SERVICE_STATE_CHANGED")
+            }
         )
 
         // 상태 관찰, 이걸 통해 관리해도 됨
@@ -129,9 +141,9 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background
+                modifier = Modifier.fillMaxSize()
             ) {
+
             AudioScreen(
                 viewModel = mainViewModel,
             )
@@ -229,7 +241,7 @@ class MainActivity : ComponentActivity() {
 
         // 상태 표시
         runOnUiThread {
-            mainViewModel.setResultText("녹음 중...")
+            mainViewModel.setResultText("듣고 있는 중이에요.")
         }
 
         Thread {
@@ -326,7 +338,7 @@ class MainActivity : ComponentActivity() {
 
         // 상태 표시
         runOnUiThread {
-            mainViewModel.setResultText("녹음 중...")
+            mainViewModel.setResultText("듣고 있는 중이에요.")
         }
 
         Thread {
@@ -426,11 +438,10 @@ class MainActivity : ComponentActivity() {
 
         // 상태 표시
         runOnUiThread {
-            mainViewModel.setResultText("녹음 중...")
+            mainViewModel.setResultText("듣고 있는 중이에요.")
         }
 
         Thread {
-//            VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 스레드 실행 시작 isListening = true
             val audioRecord = AudioRecord(
                 MediaRecorder.AudioSource.MIC,
                 SAMPLE_RATE,
@@ -519,10 +530,17 @@ class MainActivity : ComponentActivity() {
         }.start()
     }
 
-    // 서비스 시작
+    // 로출어 인식 -> 서비스 시작
     private fun startAudioService() {
-        VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료
+        val bundle = Bundle()
+
+        // 배경 변경
+//        mainViewModel.setAudioServiceRunning(true)
+        bundle.putString("commandText", mainViewModel.commandText.value)
+        bundle.putBoolean("isAudioServiceRunning", true)
+        // intent AudioService로 넘기기
         val serviceIntent = Intent(this, AudioService::class.java)
+        serviceIntent.putExtra("viewModelState", bundle)
         // 포그라운드 Service 시작
 //        ContextCompat.startForegroundService(this, serviceIntent)
         startService(serviceIntent)
@@ -530,7 +548,8 @@ class MainActivity : ComponentActivity() {
 
     // 서비스 종료
     private fun stopAudioService() {
-//        isRecording = false
+        // 배경 변경
+        mainViewModel.setAudioServiceRunning(false)
         val serviceIntent = Intent(this, AudioService::class.java)
         stopService(serviceIntent)
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 호출어 대기
@@ -582,7 +601,7 @@ class MainActivity : ComponentActivity() {
 
         // UI에 녹음 상태 표시
         runOnUiThread {
-            mainViewModel.setResultText("녹음 중...")
+            mainViewModel.setResultText("듣고 있는 중이에요.")
         }
 
         // 백그라운드 스레드에서 녹음 및 분류 실행

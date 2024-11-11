@@ -20,6 +20,9 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.savedstate.SavedStateRegistry
@@ -40,6 +43,9 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
 
+    private var commandText: String = ""
+    private var isAudioServiceRunning: Boolean = false
+
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
 
@@ -50,7 +56,9 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private lateinit var recognizerIntent: Intent
     private lateinit var classifier: AudioClassifier  // AudioClassifier 인스턴스
     private lateinit var voiceEngine: VoiceRecognitionEngine
-    private lateinit var mainViewModel: MainViewModel
+    private val mainViewModel: MainViewModel by lazy {
+        MainViewModel()
+    }
     // 손전등 관련
     private lateinit var cameraManager: CameraManager
     private var cameraId: String? = null
@@ -67,7 +75,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
 
-        mainViewModel = MainViewModel()
         notificationManager = Notification(this)
         classifier = AudioClassifier(this)  // AudioClassifier 초기화
         // 윈도우 매니져 서비스 시작
@@ -78,8 +85,10 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         initializeSpeechRecognizer()
         // 포 그라운드 시작
         // startForeground(NOTIFICATION_ID, createNotification())
-        // 3초 있다가 종료
-        Handler(Looper.getMainLooper()).postDelayed({stopListening()},10000)
+        // 10초 있다가 종료
+//        Handler(Looper.getMainLooper()).postDelayed({stopListening()},10000) // 디자인 작업 이후 주석 해제
+        // 서비스 상태 변경
+        updateServiceState(true)
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startListening() // 명령 인식 시작
@@ -89,6 +98,8 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d(TAG,"onDestroy")
+        updateServiceState(false)
         speechRecognizer.destroy()
         overlayView?.let {
             windowManager.removeView(it)
@@ -222,6 +233,11 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         }
         return executeCommant
     }
+    private fun updateServiceState(isRunning: Boolean) {
+        val intent = Intent("AUDIO_SERVICE_STATE_CHANGED")
+        intent.putExtra("isRunning", isRunning)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
     private fun stopListening() {
         val intent = Intent(this, AudioService::class.java )
 //        speechRecognizer.stopListening()
@@ -230,6 +246,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             windowManager.removeView(it)
             overlayView = null
         }
+        updateServiceState(false)
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
         stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료

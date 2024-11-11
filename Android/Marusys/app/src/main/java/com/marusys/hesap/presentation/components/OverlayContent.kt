@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,8 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.marusys.hesap.R
@@ -65,26 +70,30 @@ fun OverlayContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp))
+                    .background(Color.Transparent.copy(alpha = 0f), RoundedCornerShape(8.dp))
+                    .border(1.dp, colorResource(id = R.color.maru_blue), RoundedCornerShape(8.dp))
             ) {
                 Text(
-                    text = commandText,
+                    commandText,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 8.dp),
+                    fontWeight = FontWeight(10),
+
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(80.dp)
                     .background(Color.White, CircleShape)
+                    .border(3.dp, colorResource(id = R.color.maru_blue), CircleShape)
             ) {
                 Image(
                     painter = painterResource(R.drawable.marusys),
                     contentDescription = "마르시스 아이콘",
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.FillWidth
                 )
             }
         }
