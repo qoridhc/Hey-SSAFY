@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AudioClassifier {
-    private static final String MODEL_FILE = "trigger_word_detection_model_largeCleanDataSet_MelIntoLayer_sr16000_B32_lr1e-4_pat20.tflite";
+    private static final String MODEL_FILE = "trigger_word_detection_model_largeCleanWithHeyFalseDataSet_MelIntoLayer_sr16000_B32_lr1e-4_pat20.tflite";
     private Interpreter tflite;
     private int inputHeight;
     private int inputWidth;
