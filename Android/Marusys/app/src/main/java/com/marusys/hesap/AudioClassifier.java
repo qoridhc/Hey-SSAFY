@@ -14,14 +14,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AudioClassifier {
-    private static final String MODEL_FILE = "trigger_word_detection_model_largeDataSet_MelIntoLayer_sr16000_B32_lr1e-4_pat20.tflite";
+    private static final String MODEL_FILE = "trigger_word_detection_model_largeCleanDataSet_MelIntoLayer_sr16000_B32_lr1e-4_pat20.tflite";
     private Interpreter tflite;
     private int inputHeight;
     private int inputWidth;
     private int inputChannels;
     public AudioClassifier(Context context) {
         try {
-
             tflite = new Interpreter(loadModelFile(context, MODEL_FILE));
             // 입력 텐서의 형식 출력
             int[] inputShape = tflite.getInputTensor(0).shape();
