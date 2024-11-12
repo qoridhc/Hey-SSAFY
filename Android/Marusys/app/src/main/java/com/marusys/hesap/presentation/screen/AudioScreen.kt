@@ -27,7 +27,7 @@ import com.marusys.hesap.presentation.viewmodel.MainViewModel
 fun AudioScreen(
     // 인자의 타입 지정
     viewModel: MainViewModel,
-    recordButtons: () -> Unit
+//    recordButtons: () -> Unit
 ) {
     val resultText by viewModel.resultText.collectAsState()
     val memoryText by viewModel.memoryText.collectAsState()
@@ -44,7 +44,7 @@ fun AudioScreen(
         Spacer(modifier = Modifier.padding(16.dp))
         Button(
             // 버튼 클릭 리스너 설정 -> 버튼 클릭 시 작동
-            onClick = { recordButtons() },
+            onClick = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),

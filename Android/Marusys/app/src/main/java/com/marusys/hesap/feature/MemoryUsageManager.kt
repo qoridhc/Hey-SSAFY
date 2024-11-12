@@ -3,10 +3,13 @@ package com.marusys.hesap.feature
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Process
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 // 메모리 관련 함수 모음
-class MemoryUsageManager(private val context: Context) {
-    fun getMemoryUsage(): String {
+class MemoryUsageManager {
+    fun getMemoryUsage(context: Context): String {
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val memoryInfo = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(memoryInfo)
