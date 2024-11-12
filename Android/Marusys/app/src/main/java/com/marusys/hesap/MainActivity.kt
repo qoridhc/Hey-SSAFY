@@ -47,10 +47,8 @@ class MainActivity : ComponentActivity() {
     private val mainViewModel = MainViewModel()
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var memoryUsageManager: MemoryUsageManager
-//    private var currentDialog: AlertDialog? = null
     private val OVERLAY_PERMISSION_REQUEST_CODE = 1
 
-    private var currentDialog: AlertDialog? = null
     // 모델 타입
     enum class ModelType {
         RESNET, CNN, GRU
@@ -82,8 +80,6 @@ class MainActivity : ComponentActivity() {
                     val matches = intent.getStringArrayListExtra("matches")
                     val recognizedText = matches?.firstOrNull() ?: ""
                     Log.d("MainActivity", "Received text: $recognizedText")
-                    // 현재 표시 중인 다이얼로그가 있다면 메시지 업데이트
-    //                currentDialog?.setMessage(recognizedText)
                     // 현재 표시 중인 윈도우 매니져가 있다면 메시지 업데이트
                     mainViewModel.setCommandText(recognizedText)
                 }

@@ -1,5 +1,6 @@
 package com.marusys.hesap.presentation.components
 
+import android.graphics.Paint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,9 +39,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.marusys.hesap.R
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
@@ -61,6 +66,7 @@ fun OverlayContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 16.dp)
+                .fillMaxWidth()
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = { /* 내부 클릭 무시 */ })
                 },
@@ -69,16 +75,18 @@ fun OverlayContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .background(Color.Transparent.copy(alpha = 0f), RoundedCornerShape(16.dp))
+                    .padding(vertical = 8.dp)
+                    .background(Color.White.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
                     .border(1.dp, Color.Black, RoundedCornerShape(16.dp))
             ) {
                 Text(
                     commandText,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(vertical = 16.dp),
-                    fontWeight = FontWeight(10),
+                        .wrapContentWidth()
+                        .padding( horizontal = 16.dp, vertical = 16.dp),
+                    fontWeight = FontWeight(1000),
+                    fontSize = 20.sp,
 
                 )
             }

@@ -43,7 +43,7 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             while (true) {
                 _memoryText.value = memoryUsageManager.getMemoryUsage(context)
-                Log.e("메모리 값", memoryText.value)
+//                Log.e("메모리 값", memoryText.value)
                 delay(1000)
             }
         }
