@@ -69,25 +69,25 @@ fun OverlayContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .background(Color.Transparent.copy(alpha = 0f), RoundedCornerShape(8.dp))
-                    .border(1.dp, colorResource(id = R.color.maru_blue), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .background(Color.Transparent.copy(alpha = 0f), RoundedCornerShape(16.dp))
+                    .border(1.dp, Color.Black, RoundedCornerShape(16.dp))
             ) {
                 Text(
                     commandText,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 16.dp),
                     fontWeight = FontWeight(10),
 
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .background(Color.White, CircleShape)
-                    .border(3.dp, colorResource(id = R.color.maru_blue), CircleShape)
+                    .border(1.dp, Color.Black, CircleShape)
             ) {
                 Image(
                     painter = painterResource(R.drawable.marusys),

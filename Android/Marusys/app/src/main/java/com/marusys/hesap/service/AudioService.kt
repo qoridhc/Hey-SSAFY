@@ -20,9 +20,6 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.savedstate.SavedStateRegistry
@@ -42,9 +39,6 @@ private val TAG = "AudioService"
 class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
-
-    private var commandText: String = ""
-    private var isAudioServiceRunning: Boolean = false
 
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
@@ -86,7 +80,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         // 포 그라운드 시작
         // startForeground(NOTIFICATION_ID, createNotification())
         // 10초 있다가 종료
-//        Handler(Looper.getMainLooper()).postDelayed({stopListening()},10000) // 디자인 작업 이후 주석 해제
+        Handler(Looper.getMainLooper()).postDelayed({stopListening()},10000) // 디자인 작업 이후 주석 해제
         // 서비스 상태 변경
         updateServiceState(true)
     }
@@ -143,14 +137,9 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 mainViewModel.setCommandText(command)
             }
             Log.e(TAG,"partialResults = $match")
-//            val intent = Intent("SPEECH_RECOGNITION_RESULT")
-//            intent.putStringArrayListExtra("matches", match)
-//            LocalBroadcastManager.getInstance(this@AudioService).sendBroadcast(intent)
-//            startListening()
         }
 
         override fun onResults(results: Bundle?) {
-//            onPartialResults(results)
             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             matches?.firstOrNull()?.let { command ->
                 mainViewModel.setCommandText(command)
@@ -170,10 +159,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         override fun onBeginningOfSpeech() {
             Log.d("SpeechRecognizer", "onBeginningOfSpeech to listen...")
         }
-        override fun onRmsChanged(rmsdB: Float) {
-            //입력되는 데시벨 크기를 상수로
-            // Log.d("sound","$rmsdB");
-        }
+        override fun onRmsChanged(rmsdB: Float) {}
 
         override fun onEvent(eventType: Int, params: Bundle?) {}
         override fun onBufferReceived(buffer: ByteArray?) {}

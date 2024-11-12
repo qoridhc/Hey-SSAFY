@@ -19,14 +19,9 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.core.app.ActivityCompat
 import com.marusys.hesap.MainActivity.Constants.RECORDING_TIME
 import com.marusys.hesap.MainActivity.Constants.SAMPLE_RATE
@@ -44,7 +39,6 @@ import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import com.marusys.hesap.util.ThresholdUtil
 import com.marusys.hesap.service.AudioService
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 
 class MainActivity : ComponentActivity() {
@@ -165,7 +159,6 @@ class MainActivity : ComponentActivity() {
                 } else {
                     // 권한이 거부된 경우
                     Toast.makeText(this, "권한이 필요합니다.", Toast.LENGTH_SHORT).show()
-                    // 필요에 따라 사용자에게 권한의 필요성을 설명하고 다시 요청하거나 앱을 종료할 수 있습니다.
                 }
             }
         }
@@ -198,8 +191,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
-//        currentDialog?.dismiss()
-//        currentDialog = null
     }
 
     // 권한 체크 및 요청
@@ -290,11 +281,8 @@ class MainActivity : ComponentActivity() {
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
                                 if (results[0] >= THRESHOLD) {
                                     runOnUiThread {
-                                        // 호출어 감지 -> AudioService 시작
-                                        startAudioService() // 서비스 시작
-//                                        if (currentDialog == null) { showSuccessDialog() } // dialog 창 오픈
+                                        startAudioService() // AudioService 시작
                                     }
-                                    VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
                                     break  // 루프 종료
                                 }
                             } catch (e: Exception) {
@@ -389,11 +377,8 @@ class MainActivity : ComponentActivity() {
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
                                 if (results[0] >= THRESHOLD) {
                                     runOnUiThread {
-                                        // 호출어 감지 -> AudioService 시작
-                                        startAudioService() // 서비스 시작
-//                                        if (currentDialog == null){ showSuccessDialog()} // dialog 창 오픈
+                                        startAudioService() // AudioService 시작
                                     }
-                                    VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
                                     break  // 루프 종료
                                 }
                             } catch (e: Exception) {
@@ -480,7 +465,6 @@ class MainActivity : ComponentActivity() {
                                 val accuracy = ThresholdUtil.checkTrigger(results)
                                 val resultLabel = classifier.getLabel(results)
 
-
                                 val resultText = StringBuilder()
                                 val percentage = String.format("%.2f%%", accuracy * 100)
 
@@ -498,11 +482,8 @@ class MainActivity : ComponentActivity() {
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
                                 if (accuracy >= THRESHOLD && resultLabel.equals(TRIGGER_WORD)) {
                                     runOnUiThread {
-                                        // 호출어 감지 -> AudioService 시작
-                                        startAudioService() // 서비스 시작
-//                                        if (currentDialog == null) { showSuccessDialog() } // dialog 창 오픈
+                                        startAudioService() // AudioService 시작
                                     }
-                                    VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
                                     break  // 루프 종료
                                 }
                             } catch (e: Exception) {
@@ -533,9 +514,6 @@ class MainActivity : ComponentActivity() {
     // 로출어 인식 -> 서비스 시작
     private fun startAudioService() {
         val bundle = Bundle()
-
-        // 배경 변경
-//        mainViewModel.setAudioServiceRunning(true)
         bundle.putString("commandText", mainViewModel.commandText.value)
         bundle.putBoolean("isAudioServiceRunning", true)
         // intent AudioService로 넘기기
@@ -543,6 +521,7 @@ class MainActivity : ComponentActivity() {
         serviceIntent.putExtra("viewModelState", bundle)
         // 포그라운드 Service 시작
 //        ContextCompat.startForegroundService(this, serviceIntent)
+        VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
         startService(serviceIntent)
     }
 
@@ -555,31 +534,6 @@ class MainActivity : ComponentActivity() {
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 호출어 대기
     }
 
-    // 호출어 인식 성공 시 보여줄 팝업
-    private fun showSuccessDialog() {
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("호출어 인식 성공")
-            .setMessage("호출어가 성공적으로 인식되었습니다!")
-            .setPositiveButton("확인") { it, _ ->
-                it.dismiss()
-                stopAudioService() // 서비스 종료
-//                isRecording = false
-                currentDialog = null
-                VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword)
-            }
-            .setCancelable(false)
-            .create()
-
-        // 다이얼로그 참조 저장
-            currentDialog = dialog
-
-       dialog.setOnDismissListener {
-            currentDialog = null
-           stopAudioService()
-        }
-        currentDialog = dialog
-        currentDialog?.show()
-    }
 
     // 모델을 사용하여 음성 데이터를 분류하는 함수
     fun resnetClassify() {
