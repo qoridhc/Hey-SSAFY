@@ -89,7 +89,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         // 포 그라운드 시작
         // startForeground(NOTIFICATION_ID, createNotification())
         // 10초 있다가 종료
-//        Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 10000) // 디자인 작업 이후 주석 해제
+        Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 10000) // 디자인 작업 이후 주석 해제
         // 서비스 상태 변경
         updateServiceState(true)
     }
@@ -132,7 +132,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             // 최소 밀리 세컨드 이상
 //            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 100)
 //             1초 정도 정적이 있으면 음성 인식을 완료됐을 가능성 있다고 판단
-//            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1000)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 100)
             // 일리 세컨드 정도 완전한 침묵 = 입력 완
 //            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 100)
         }
