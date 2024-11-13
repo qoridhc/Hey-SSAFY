@@ -39,6 +39,8 @@
             android:exported="true"
             android:foregroundServiceType="mediaPlayback" />
 
+        <activity android:name=".presentation.SettingsActivity" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
