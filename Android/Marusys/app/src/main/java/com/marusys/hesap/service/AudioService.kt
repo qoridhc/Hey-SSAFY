@@ -45,6 +45,16 @@ private val TAG = "AudioService"
 
 class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
+    private object PackageName {
+        const val YOUTUBE = "com.google.android.youtube"
+        const val KAKAO = "com.kakao.talk"
+    }
+
+    private object UrlName{
+        const val WEATHER = "https://www.weather.go.kr/weather/special/special_03_final.jsp?sido=4700000000&gugun=4719000000&dong=4792032000"
+    }
+
+
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
@@ -238,7 +248,10 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             // 명령어 하드 코딩
             command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
             command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
-          else -> executeCommant = false
+            command.contains("날씨", ignoreCase = true) -> weatherInBrowser(UrlName.WEATHER)
+            command.contains("유튜브 켜", ignoreCase = true) -> openApp(PackageName.YOUTUBE)
+            command.contains("카카오톡 켜", ignoreCase = true) -> openApp(PackageName.KAKAO)
+            else -> executeCommant = false
         }
         return executeCommant
     }
