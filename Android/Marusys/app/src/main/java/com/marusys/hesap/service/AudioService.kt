@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -16,6 +17,7 @@ import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -42,6 +44,7 @@ import kotlinx.coroutines.launch
 private val TAG = "AudioService"
 
 class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
+
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
@@ -235,7 +238,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             // 명령어 하드 코딩
             command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
             command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
-            else -> executeCommant = false
+          else -> executeCommant = false
         }
         return executeCommant
     }
@@ -266,4 +269,23 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             cameraManager.setTorchMode(id, on)
         }
     }
+
+    private fun weatherInBrowser(url: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)  // 새로운 태스크로 실행하도록 플래그 추가
+        startActivity(intent)
+    }
+
+    private fun openApp(packageName: String) {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.setPackage(packageName)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "앱이 설치되어 있지 않습니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
 }
