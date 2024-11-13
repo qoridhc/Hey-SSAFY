@@ -98,7 +98,7 @@ class MainActivity : ComponentActivity() {
         // 오버레이 권한 체크 및 요청
         checkOverlayPermission()
         // ViewModel의 메모리 사용량 업데이트 시작
-        mainViewModel.updateMemoryUsage(this)
+//        mainViewModel.updateMemoryUsage(this)
 
         // BroadcastReceiver 등록
         LocalBroadcastManager.getInstance(this).registerReceiver(
