@@ -22,6 +22,8 @@ import com.marusys.hesap.AudioClassifier
 import com.marusys.hesap.R
 import com.marusys.hesap.feature.VoiceRecognitionState
 import com.marusys.hesap.feature.VoiceStateManager
+import com.marusys.hesap.presentation.components.AudioNotification
+import com.marusys.hesap.presentation.components.AudioNotification.Companion.NOTIFICATION_ID
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import com.marusys.hesap.service.AudioConstants.RECORDING_TIME
 import com.marusys.hesap.service.AudioConstants.SAMPLE_RATE
@@ -45,18 +47,14 @@ object AudioConstants {
 }
 private val TAG = "HotWordService"
 class HotWordService : Service() {
-//    private lateinit var audioServiceIntent: Intent
     private lateinit var wakeLock: PowerManager.WakeLock
-    private val mainViewModel: MainViewModel by lazy {
-        MainViewModel()
-    }
-    private val NOTIFICATION_ID = 1
-    private val CHANNEL_ID = "BackgroundServiceChannel"
+    private lateinit var audioNotification : AudioNotification
+    private lateinit var classifier: AudioClassifier
+    private lateinit var audioIntent: Intent
     // 모델 타입
     enum class ModelType {
         RESNET, CNN, GRU
     }
-
     var MODEL_TYPE: ModelType = ModelType.GRU
 
     // 사용자에게 모델 타입을 선택할 수 있게 해주는 메서드
@@ -71,54 +69,48 @@ class HotWordService : Service() {
         Log.e(TAG,"호출어 탐지 시작")
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "HotWordService::WakeLock")
-        gruRealTimeRecordAndClassify()
+        wakeLock.acquire()
+        audioNotification = AudioNotification(this)
+//        startForeground(NOTIFICATION_ID, createNotification()) //알림창 실행
+        startForeground(NOTIFICATION_ID, audioNotification.getNotification()) //알림창 실행
+        classifier = AudioClassifier(this)
+        gruRealTimeRecordAndClassify() // 호출어 인식
+
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.e(TAG,"onstartCommand")
-        startForeground(NOTIFICATION_ID, createNotification())
-        wakeLock.acquire()
         gruRealTimeRecordAndClassify()
         return START_STICKY
     }
 
     override fun onDestroy() {
-        Log.e(TAG,"ondestroy")
         super.onDestroy()
+        Log.e(TAG,"ondestroy")
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
+        stopForeground(STOP_FOREGROUND_DETACH)
+        // 알림 유지
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(NOTIFICATION_ID, audioNotification.getNotification())
+
+        // 서비스 재시작
+        val restartServiceIntent = Intent(applicationContext, HotWordService::class.java)
+        startService(restartServiceIntent)
     }
     override fun onBind(intent: Intent): IBinder?  = null
 
-    private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Background Service Channel",
-            NotificationManager.IMPORTANCE_LOW
-        )
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.createNotificationChannel(channel)
-    }
-    private fun createNotification(): Notification {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("앱 실행 중")
-            .setContentText("앱이 백그라운드에서 실행 중입니다.")
-            .setSmallIcon(R.drawable.marusys_icon)
-            .build()
-    }
-
     // 로출어 인식 -> 서비스 시작
     private fun startAudioService() {
-//        val bundle = Bundle()
+        val bundle = Bundle()
 //        bundle.putString("commandText", mainViewModel.commandText.value)
-//        bundle.putBoolean("isAudioServiceRunning", true)
+        bundle.putBoolean("isAudioServiceRunning", true)
+        audioIntent = Intent(this, AudioService::class.java)
         // intent AudioService로 넘기기
-//        val serviceIntent = Intent(this, AudioService::class.java)
-//        serviceIntent.putExtra("viewModelState", bundle)
-//        audioServiceIntent = Intent(this, AudioService::class.java)
-//        audioServiceIntent.putExtra("viewModelState", bundle)
-        // 포그라운드 Service 시작
-//        ContextCompat.startForegroundService(this, serviceIntent)
-        val intent = Intent(this, AudioService::class.java)
+        audioIntent.putExtra("viewModelState", bundle)
         VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
-        startForegroundService(intent)
+        // 포그라운드 Service 시작
+//        startForegroundService(audioIntent)
     }
     private fun sendResultUpdate(result: String) {
         val intent = Intent("RESULT_UPDATE")
@@ -188,7 +180,8 @@ class HotWordService : Service() {
 
                                 // 호출어가 감지되면 팝업을 띄우고 스레드를 중단
                                 if (results[0] >= THRESHOLD) {
-                                        startAudioService() // AudioService 시작
+//                                        startAudioService() // AudioService 시작
+                                    VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting)
                                     break  // 루프 종료
                                 }
                             } catch (e: Exception) {

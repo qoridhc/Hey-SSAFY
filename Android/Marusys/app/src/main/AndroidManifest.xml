@@ -17,6 +17,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <queries>
         <intent>
@@ -37,16 +39,15 @@
         <service
             android:name=".service.HotWordService"
             android:enabled="true"
-            android:exported="false"/>
-        <service
-            android:name=".service.NotificationService"
-            android:enabled="true"
-            android:exported="true" />
+            android:exported="false"
+            android:foregroundServiceType="microphone"/>
         <service
             android:name=".service.AudioService"
             android:enabled="true"
             android:exported="true"
-            android:foregroundServiceType="mediaPlayback" />
+            android:foregroundServiceType="microphone"/>
+
+        <activity android:name=".presentation.SettingsActivity" />
 
         <activity
             android:name=".MainActivity"

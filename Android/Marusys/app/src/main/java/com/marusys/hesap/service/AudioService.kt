@@ -9,6 +9,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -19,6 +20,7 @@ import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
@@ -47,6 +49,17 @@ import kotlinx.coroutines.cancel
 private val TAG = "AudioService"
 
 class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
+
+    private object PackageName {
+        const val YOUTUBE = "com.google.android.youtube"
+        const val KAKAO = "com.kakao.talk"
+    }
+
+    private object UrlName{
+        const val WEATHER = "https://www.weather.go.kr/weather/special/special_03_final.jsp?sido=4700000000&gugun=4719000000&dong=4792032000"
+    }
+
+
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
@@ -91,12 +104,10 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         initializeCamera()
         // SpeechRecognizer 시작
         initializeSpeechRecognizer()
-        // 포 그라운드 시작
-//         startForeground(NOTIFICATION_ID, createNotification())
-        // 10초 있다가 종료
-        Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 10000) // 디자인 작업 이후 주석 해제
         // 서비스 상태 변경
         updateServiceState(true)
+        // 10초 있다가 종료
+        Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 10000) // 디자인 작업 이후 주석 해제
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -239,6 +250,9 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             // 명령어 하드 코딩
             command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
             command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
+            command.contains("날씨", ignoreCase = true) -> weatherInBrowser(UrlName.WEATHER)
+            command.contains("유튜브 켜", ignoreCase = true) -> openApp(PackageName.YOUTUBE)
+            command.contains("카카오톡 켜", ignoreCase = true) -> openApp(PackageName.KAKAO)
             else -> executeCommant = false
         }
         return executeCommant
@@ -261,27 +275,29 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         updateServiceState(false)
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
-//        stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료
+        stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료
     }
-//    private fun createNotification(): Notification {
-//        val channelId = "audio_recognition_channel"
-//        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-//
-//
-//        val channel = NotificationChannel(channelId, "Audio Recognition", NotificationManager.IMPORTANCE_DEFAULT)
-//        notificationManager.createNotificationChannel(channel)
-//
-//
-//        return NotificationCompat.Builder(this, channelId)
-//            .setContentTitle("Audio Recognition")
-//            .setContentText("Listening...")
-//            .setSmallIcon(R.drawable.marusys_icon)
-//            .build()
-//    }
     // 손전등 on off
     private fun toggleFlashlight(on: Boolean) {
         cameraId?.let { id ->
             cameraManager.setTorchMode(id, on)
+        }
+    }
+
+    private fun weatherInBrowser(url: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)  // 새로운 태스크로 실행하도록 플래그 추가
+        startActivity(intent)
+    }
+
+    private fun openApp(packageName: String) {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.setPackage(packageName)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "앱이 설치되어 있지 않습니다.", Toast.LENGTH_SHORT).show()
         }
     }
 }

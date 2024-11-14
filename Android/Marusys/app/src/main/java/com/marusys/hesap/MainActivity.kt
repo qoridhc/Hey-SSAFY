@@ -40,8 +40,8 @@ import com.marusys.hesap.service.HotWordService
 import com.marusys.hesap.service.NotificationService
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
 
+class MainActivity : ComponentActivity() {
     // 여러 페이지에서 사용하는 값을 관리하는 viewModel
     private val mainViewModel = MainViewModel()
     private val handler = Handler(Looper.getMainLooper())
@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
                 }
                 "AUDIO_SERVICE_STATE_CHANGED" -> {
                     val isRunning = intent.getBooleanExtra("isRunning", false)
+                    Log.d("AUDIO_SERVICE_STATE_CHANGED",isRunning.toString())
                     mainViewModel.setAudioServiceRunning(isRunning)
                 }
                 "RESULT_UPDATE" -> {
@@ -79,11 +80,7 @@ class MainActivity : ComponentActivity() {
         checkAndRequestPermissions()
         // 오버레이 권한 체크 및 요청
         checkOverlayPermission()
-        // ViewModel의 메모리 사용량 업데이트 시작
-        mainViewModel.updateMemoryUsage(this)
-        // notification
-//        startBackgroundService()
-        startHotWordService()
+//        startHotWordService()
         // BroadcastReceiver 등록
         LocalBroadcastManager.getInstance(this).registerReceiver(
             receiver,
@@ -105,6 +102,8 @@ class MainActivity : ComponentActivity() {
                     }
                     is VoiceRecognitionState.HotwordDetecting -> {
                         Log.e("","호출어 인식 상태")
+                        startAudioService()
+//                        mainViewModel.setAudioServiceRunning(true)
                     }
                     is VoiceRecognitionState.CommandListening -> {
                         Log.e("","명령 들은 상태")
@@ -135,6 +134,7 @@ class MainActivity : ComponentActivity() {
                 if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                     // 모든 권한이 승인된 경우
 //                    startRecordingWithModel()
+                    startHotWordService()
                 } else {
                     // 권한이 거부된 경우
                     Toast.makeText(this, "권한이 필요합니다.", Toast.LENGTH_SHORT).show()
@@ -142,7 +142,18 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
+    // 권한 체크 및 요청
+    private fun checkAndRequestPermissions() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+            checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.POST_NOTIFICATIONS),
+                1
+            )
+        }
+    }
     private fun checkOverlayPermission() {
         if (!Settings.canDrawOverlays(this)) {
             val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -172,28 +183,9 @@ class MainActivity : ComponentActivity() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(receiver)
         stopService(audioRecognitionServiceIntent)
     }
-    // 권한 체크 및 요청
-    private fun checkAndRequestPermissions() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
-            checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(
-                arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA),
-                1
-            )
-        }
-    }
-    // 백그라운드 서비스
-    private fun startBackgroundService() {
-        val serviceIntent = Intent(this, NotificationService::class.java)
-        startForegroundService(serviceIntent)
-    }
+    // 호출어 인식 서비스 시작
     private fun startHotWordService() {
         audioRecognitionServiceIntent = Intent(this, HotWordService::class.java)
-        startForegroundService(audioRecognitionServiceIntent)
-    }
-    private fun startContinuousListening() {
-        audioRecognitionServiceIntent = Intent(this, AudioService::class.java)
         startForegroundService(audioRecognitionServiceIntent)
     }
     // 로출어 인식 -> 서비스 시작
@@ -208,8 +200,9 @@ class MainActivity : ComponentActivity() {
         audioRecognitionServiceIntent.putExtra("viewModelState", bundle)
         // 포그라운드 Service 시작
 //        ContextCompat.startForegroundService(this, serviceIntent)
-        VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
-        startForegroundService(audioRecognitionServiceIntent)
+//        VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting) // 호출어 인식 완료, isListen = false
+//        startForegroundService(audioRecognitionServiceIntent)
+        startService(audioRecognitionServiceIntent)
     }
 
     // 서비스 종료
