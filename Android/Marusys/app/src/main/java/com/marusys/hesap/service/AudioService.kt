@@ -1,5 +1,8 @@
 package com.marusys.hesap.service
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -17,6 +20,7 @@ import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.ui.platform.ComposeView
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -27,17 +31,18 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.marusys.hesap.AudioClassifier
+import com.marusys.hesap.R
 import com.marusys.hesap.feature.VoiceRecognitionEngine
 import com.marusys.hesap.feature.VoiceRecognitionState
 import com.marusys.hesap.feature.VoiceStateManager
-import com.marusys.hesap.presentation.components.Notification
+import com.marusys.hesap.presentation.components.AudioNotification
+import com.marusys.hesap.presentation.components.AudioNotification.Companion.NOTIFICATION_ID
 import com.marusys.hesap.presentation.components.OverlayContent
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 
 private val TAG = "AudioService"
 
@@ -65,7 +70,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private var cameraId: String? = null
 
     // 알림창
-    private lateinit var notificationManager: Notification
+    private lateinit var audioNotificationManager: AudioNotification
 
     // 오베리이 관련
     private lateinit var windowManager: WindowManager
@@ -78,7 +83,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
 
-        notificationManager = Notification(this)
+        audioNotificationManager = AudioNotification(this)
         classifier = AudioClassifier(this)  // AudioClassifier 초기화
         // 윈도우 매니져 서비스 시작
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
@@ -87,7 +92,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         // SpeechRecognizer 시작
         initializeSpeechRecognizer()
         // 포 그라운드 시작
-        // startForeground(NOTIFICATION_ID, createNotification())
+//         startForeground(NOTIFICATION_ID, createNotification())
         // 10초 있다가 종료
         Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 10000) // 디자인 작업 이후 주석 해제
         // 서비스 상태 변경
@@ -226,7 +231,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             windowManager.addView(overlayView, params)
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
         }
-
     }
 
     private fun executeCommand(command: String): Boolean {
@@ -257,9 +261,23 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         updateServiceState(false)
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
-        stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료
+//        stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료
     }
-
+//    private fun createNotification(): Notification {
+//        val channelId = "audio_recognition_channel"
+//        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+//
+//
+//        val channel = NotificationChannel(channelId, "Audio Recognition", NotificationManager.IMPORTANCE_DEFAULT)
+//        notificationManager.createNotificationChannel(channel)
+//
+//
+//        return NotificationCompat.Builder(this, channelId)
+//            .setContentTitle("Audio Recognition")
+//            .setContentText("Listening...")
+//            .setSmallIcon(R.drawable.marusys_icon)
+//            .build()
+//    }
     // 손전등 on off
     private fun toggleFlashlight(on: Boolean) {
         cameraId?.let { id ->

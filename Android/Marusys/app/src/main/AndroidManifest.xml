@@ -10,10 +10,12 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <queries>
@@ -32,7 +34,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Marusys"
         tools:targetApi="31">
-
+        <service
+            android:name=".service.HotWordService"
+            android:enabled="true"
+            android:exported="false"/>
+        <service
+            android:name=".service.NotificationService"
+            android:enabled="true"
+            android:exported="true" />
         <service
             android:name=".service.AudioService"
             android:enabled="true"

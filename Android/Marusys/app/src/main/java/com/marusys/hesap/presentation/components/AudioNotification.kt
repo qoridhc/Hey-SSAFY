@@ -11,7 +11,7 @@ import com.marusys.hesap.MainActivity
 import com.marusys.hesap.R
 
 // 알림창
-class Notification(private val context: Context) {
+class AudioNotification(private val context: Context) {
     private val notificationManager: NotificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private lateinit var notificationBuilder: NotificationCompat.Builder
@@ -38,7 +38,7 @@ class Notification(private val context: Context) {
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("마르시스")
             .setContentText("음성 인식 대기 중...")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.marusys_icon)
             .setContentIntent(pendingIntent)
     }
 
@@ -54,3 +54,4 @@ class Notification(private val context: Context) {
         const val NOTIFICATION_ID = 1
     }
 }
+
