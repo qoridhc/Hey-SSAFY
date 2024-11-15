@@ -44,7 +44,7 @@
         <service
             android:name=".service.AudioService"
             android:enabled="true"
-            android:exported="true"
+            android:exported="false"
             android:foregroundServiceType="microphone"/>
 
         <activity android:name=".presentation.SettingsActivity" />
@@ -54,7 +54,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <!-- <action android:name="android.speech.RecognitionService" /> -->
+                 <action android:name="android.speech.RecognitionService" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

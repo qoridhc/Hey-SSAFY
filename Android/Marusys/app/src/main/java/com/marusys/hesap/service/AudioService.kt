@@ -1,8 +1,6 @@
 package com.marusys.hesap.service
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -14,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -26,6 +25,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.savedstate.SavedStateRegistry
@@ -34,10 +34,10 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.marusys.hesap.AudioClassifier
 import com.marusys.hesap.R
-import com.marusys.hesap.feature.VoiceRecognitionEngine
 import com.marusys.hesap.feature.VoiceRecognitionState
 import com.marusys.hesap.feature.VoiceStateManager
 import com.marusys.hesap.presentation.components.AudioNotification
+import com.marusys.hesap.presentation.components.AudioNotification.Companion.CHANNEL_ID
 import com.marusys.hesap.presentation.components.AudioNotification.Companion.NOTIFICATION_ID
 import com.marusys.hesap.presentation.components.OverlayContent
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
@@ -59,10 +59,10 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         const val WEATHER = "https://www.weather.go.kr/weather/special/special_03_final.jsp?sido=4700000000&gugun=4719000000&dong=4792032000"
     }
 
-
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
+    private lateinit var wakeLock: PowerManager.WakeLock
 
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
@@ -73,17 +73,12 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var recognizerIntent: Intent
     private lateinit var classifier: AudioClassifier  // AudioClassifier 인스턴스
-    private lateinit var voiceEngine: VoiceRecognitionEngine
     private val mainViewModel: MainViewModel by lazy {
         MainViewModel()
     }
-
     // 손전등 관련
     private lateinit var cameraManager: CameraManager
     private var cameraId: String? = null
-
-    // 알림창
-    private lateinit var audioNotificationManager: AudioNotification
 
     // 오베리이 관련
     private lateinit var windowManager: WindowManager
@@ -92,14 +87,18 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onCreate() {
         super.onCreate()
         Log.e(TAG, "오디오 서비스 시작")
-        VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting)
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "HotWordService::WakeLock")
+        wakeLock.acquire(10*60*1000L /*10 minutes*/)
+
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
-
-        audioNotificationManager = AudioNotification(this)
+        // 즉시 포그라운드 서비스 시작
         classifier = AudioClassifier(this)  // AudioClassifier 초기화
         // 윈도우 매니져 서비스 시작
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+
+        startForeground(NOTIFICATION_ID, createNotification())
         // 카메라 초기화- 손전등 관련 코드
         initializeCamera()
         // SpeechRecognizer 시작
@@ -120,14 +119,15 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy")
+        stopForeground(STOP_FOREGROUND_DETACH)
         updateServiceState(false)
         speechRecognizer.destroy()
         overlayView?.let {
             windowManager.removeView(it)
             overlayView = null
         }
-        serviceScope.cancel()
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        serviceScope.cancel()
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
     }
 
@@ -177,7 +177,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             matches?.firstOrNull()?.let { command ->
                 mainViewModel.setCommandText(command)
                 if (executeCommand(command)) {
-                    stopListening()
+                    Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 300)
                 }
             }
             Log.e(TAG, "results $matches")
@@ -243,12 +243,24 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
         }
     }
-
+    private fun stopListening() {
+        updateServiceState(false)
+        stopForeground(STOP_FOREGROUND_DETACH)
+        val intent = Intent(this, AudioService::class.java)
+        speechRecognizer.destroy()
+        overlayView?.let {
+            windowManager.removeView(it)
+            overlayView = null
+        }
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료
+        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
+    }
     private fun executeCommand(command: String): Boolean {
         var executeCommant = true
         when {
             // 명령어 하드 코딩
-            command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
+            command.contains("손전등 켜", ignoreCase = true) -> {toggleFlashlight(true); stopForeground(STOP_FOREGROUND_DETACH)}
             command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
             command.contains("날씨", ignoreCase = true) -> weatherInBrowser(UrlName.WEATHER)
             command.contains("유튜브 켜", ignoreCase = true) -> openApp(PackageName.YOUTUBE)
@@ -263,19 +275,13 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         intent.putExtra("isRunning", isRunning)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
-
-    private fun stopListening() {
-        val intent = Intent(this, AudioService::class.java)
-//        speechRecognizer.stopListening()
-        speechRecognizer.destroy()
-        overlayView?.let {
-            windowManager.removeView(it)
-            overlayView = null
-        }
-        updateServiceState(false)
-        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
-        stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료
+    private fun createNotification(): Notification {
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("음성 명령 대기 중")
+            .setContentText("명령을 말씀해 주세요")
+            .setSmallIcon(R.drawable.marusys_icon)
+            .setOngoing(true)
+            .build()
     }
     // 손전등 on off
     private fun toggleFlashlight(on: Boolean) {
