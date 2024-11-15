@@ -28,7 +28,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.marusys.hesap.AudioClassifier
+import com.marusys.hesap.classifier.AudioClassifier
 import com.marusys.hesap.feature.VoiceRecognitionEngine
 import com.marusys.hesap.feature.VoiceRecognitionState
 import com.marusys.hesap.feature.VoiceStateManager
@@ -39,7 +39,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 
 private val TAG = "AudioService"
 
@@ -92,7 +91,8 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
 
         notificationManager = Notification(this)
-        classifier = AudioClassifier(this)  // AudioClassifier 초기화
+        classifier =
+            AudioClassifier(this)  // AudioClassifier 초기화
         // 윈도우 매니져 서비스 시작
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         // 카메라 초기화- 손전등 관련 코드
