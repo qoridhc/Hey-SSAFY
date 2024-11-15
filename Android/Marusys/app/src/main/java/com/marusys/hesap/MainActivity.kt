@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // CNN & RNN은 같은 AudioClassifer 클래스를 사용하므로 (RNN <-> CNN) 변경 시 클래스 내부 tflite 모델 (RNN <-> CNN) 변경 필요
-    var MODEL_TYPE: ModelType = ModelType.CNN
+    var MODEL_TYPE: ModelType = ModelType.RESNET
 
     // 녹음 관련 상수 정의
     object Constants {
