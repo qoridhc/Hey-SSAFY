@@ -1,7 +1,6 @@
 package com.marusys.hesap
 
 import android.Manifest
-import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent

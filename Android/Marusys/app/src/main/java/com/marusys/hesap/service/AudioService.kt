@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -87,6 +88,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onCreate() {
         super.onCreate()
         Log.e(TAG, "오디오 서비스 시작")
+        playSoundFromAssets("ne.wav") // WAV 파일 재생
         VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting)
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
@@ -244,17 +246,43 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     private fun executeCommand(command: String): Boolean {
         var executeCommant = true
+
         when {
             // 명령어 하드 코딩
             command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
             command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
-            command.contains("날씨", ignoreCase = true) -> weatherInBrowser(UrlName.WEATHER)
-            command.contains("유튜브 켜", ignoreCase = true) -> openApp(PackageName.YOUTUBE)
-            command.contains("카카오톡 켜", ignoreCase = true) -> openApp(PackageName.KAKAO)
+            command.contains("날씨", ignoreCase = true) -> {
+                weatherInBrowser(UrlName.WEATHER)
+                playSoundFromAssets("weather.wav") // WAV 파일 재생
+            }
+            command.contains("유튜브", ignoreCase = true) -> openApp(PackageName.YOUTUBE)
+            command.contains("카카오톡", ignoreCase = true) -> openApp(PackageName.KAKAO)
             else -> executeCommant = false
         }
         return executeCommant
     }
+    private fun playSoundFromAssets(fileName: String) {
+        try {
+            val assetManager = assets
+            val assetFileDescriptor = assetManager.openFd(fileName)
+            val mediaPlayer = MediaPlayer()
+            mediaPlayer.setDataSource(
+                assetFileDescriptor.fileDescriptor,
+                assetFileDescriptor.startOffset,
+                assetFileDescriptor.length
+            )
+            mediaPlayer.prepare()
+            mediaPlayer.start()
+            mediaPlayer.setOnCompletionListener {
+                it.release() // 재생 완료 후 MediaPlayer 해제
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+
+
 
     private fun updateServiceState(isRunning: Boolean) {
         val intent = Intent("AUDIO_SERVICE_STATE_CHANGED")
