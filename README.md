@@ -1,14 +1,15 @@
 
 ## 📅 기간
 
-- 2024.10.14 ~ 2024.11.19
+`2024.10.14 ~ 2024.11.19`
 
 ## ℹ 프로젝트 소개
 
 사용자가 특정 단어(호출어)를 발화했을 때 이를 인식하고, 이후 음성 명령에 따라 반응하는 **실시간 음성 인식 안드로이드 어플리케이션** 입니다.
 
-사용자가 쉽게 음성인식 AI 모델을 구축하고 안드로이드 기기에 포팅할 수 있도록 다양한 문서화 툴을 제공합니다.
+사용자가 음성 인식 AI 모델을 손쉽게 구축하고 안드로이드 기기에 포팅할 수 있도록 다양한 예제 문서와 도구를 제공합니다. 
 
+이를 통해 사용자는 간단하게 음성 인식 모델을 만들고, 안드로이드 기반의 온디바이스 AI 예제를 실행할 수 있습니다.
 ### 주요기능
 #### 1. 실시간 호출어 인식 (Keyword Spotting)
    - CNN, RNN, ResNet 세 가지 음성 인식 모델을 결합하여 실시간으로 호출어 감지
@@ -122,8 +123,10 @@ ModelType 통해 새로운 AI 모델을 쉽게 추가하고 변경할 수 있습
 ```
 asset 폴더에 tflite로 변환한 CNN / RNN 모델 경로를 명시해줍니다.
 
+아래 예제를 통해 CNN 모델을 통해 AI 모델을 학습시키고 tflite로 변환할 수 있습니다.
 
 [CNN 학습 및 tflite 변환 예제](https://lab.ssafy.com/s11-final/S11P31S207/-/blob/develop/AI/CNN/README.md?ref_type=heads)
+
 
 ### Resnet
 #### ResnetClassifier
@@ -154,3 +157,8 @@ Asset 폴더에 삽입한 AI 모델을 변환한 PyTorch Script 파일을 불러
 
 - **mel_spectogram_model** : 음성 데이터를 **MelSpectogram**으로 변환
 - **resnet_model** : Resnet 학습 모델
+
+아래 예제를 통해 RESNET 모델을 통해 AI 모델을 학습시키고 pytorch로 변환할 수 있습니다.
+
+[RESNET 학습 및 PyTorch 변환 예제](https://lab.ssafy.com/s11-final/S11P31S207/-/tree/develop/AI/bcresnet-main?ref_type=heads)
+
