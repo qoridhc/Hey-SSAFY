@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -46,92 +47,144 @@ import kotlinx.coroutines.runBlocking
 private val TAG = "AudioService"
 
 class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
-
     private object PackageName {
         const val YOUTUBE = "com.google.android.youtube"
         const val KAKAO = "com.kakao.talk"
     }
-
     private object UrlName{
         const val WEATHER = "https://www.weather.go.kr/weather/special/special_03_final.jsp?sido=4700000000&gugun=4719000000&dong=4792032000"
     }
-
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
-
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
-
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateRegistryController.savedStateRegistry
-
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var recognizerIntent: Intent
     private lateinit var classifier: AudioClassifier  // AudioClassifier 인스턴스
     private val mainViewModel: MainViewModel by lazy {
         MainViewModel()
     }
-
     // 손전등 관련
     private lateinit var cameraManager: CameraManager
     private var cameraId: String? = null
-
     // 알림창
     private lateinit var audioNotificationManager: AudioNotification
-
     // 오베리이 관련
     private lateinit var windowManager: WindowManager
     private var overlayView: ComposeView? = null
 
+    private val handler = Handler(Looper.getMainLooper())
+    private val overlayLock = Any()
+
     override fun onCreate() {
         super.onCreate()
         Log.e(TAG, "오디오 서비스 시작")
-        playSoundFromAssets("ne.wav") // WAV 파일 재생\
+        playSoundFromAssets("ne.wav")
+
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
 
         audioNotificationManager = AudioNotification(this)
-        classifier = AudioClassifier(this)  // AudioClassifier 초기화
-        // 윈도우 매니져 서비스 시작
+        classifier = AudioClassifier(this)
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        // 카메라 초기화- 손전등 관련 코드
+
         initializeCamera()
-        // SpeechRecognizer 시작
         initializeSpeechRecognizer()
-        // 서비스 상태 변경
         updateServiceState(true)
-        // 10초 있다가 종료
-        Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 10000) // 디자인 작업 이후 주석 해제
+
+        handler.postDelayed({ stopListening() }, 5000)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startListening() // 명령 인식 시작
+        startListening()
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    private fun startListening() {
+        showOverlay()
+         handler.postDelayed( {
+            speechRecognizer.startListening(recognizerIntent)
+        },500)
+    }
+
+    private fun showOverlay() {
+        if (!Settings.canDrawOverlays(this)) {
+            Log.e(TAG, "오버레이 권한이 없습니다.")
+            return
+        }
+
+        synchronized(overlayLock) {
+            if (overlayView == null) {
+                overlayView = ComposeView(applicationContext).apply {
+                    setViewTreeLifecycleOwner(this@AudioService)
+                    setViewTreeSavedStateRegistryOwner(this@AudioService)
+                    setContent {
+                        OverlayContent({ stopListening() }, mainViewModel)
+                    }
+                }
+                val params = WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                    PixelFormat.TRANSLUCENT
+                ).apply {
+                    gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                }
+                try {
+                    windowManager.addView(overlayView, params)
+                    lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+                } catch (e: Exception) {
+                    Log.e(TAG, "오버레이 뷰 추가 실패: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun stopListening() {
+        handler.post {
+            speechRecognizer.destroy()
+            VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword)
+            removeOverlay()
+            updateServiceState(false)
+            lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+            stopSelf()
+        }
+    }
+
+    private fun removeOverlay() {
+        synchronized(overlayLock) {
+            overlayView?.let {
+                try {
+                    windowManager.removeView(it)
+                } catch (e: Exception) {
+                    Log.e(TAG, "오버레이 뷰 제거 실패: ${e.message}")
+                }
+                overlayView = null
+            }
+        }
+    }
 
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "onDestroy")
+        handler.removeCallbacksAndMessages(null)
+        removeOverlay()
         updateServiceState(false)
         speechRecognizer.destroy()
-        overlayView?.let {
-            windowManager.removeView(it)
-            overlayView = null
-        }
-        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         serviceScope.cancel()
-        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword)
     }
-
+    override fun onBind(intent: Intent?): IBinder? = null
     // 음성녹음 초기화
     private fun initializeSpeechRecognizer() {
         // 온디바이스 음성 인식 가능 여부 확인
         val isOnDeviceRecognitionAvailable = SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
         Log.d(TAG, "온디바이스 음성 인식 가능 여부: $isOnDeviceRecognitionAvailable")
-
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer.setRecognitionListener(recognitionListener)
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -153,7 +206,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 //            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 100)
         }
     }
-
     // 카메라 초기화
     private fun initializeCamera() {
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -162,7 +214,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
         }
     }
-
     private val recognitionListener = object : RecognitionListener {
         override fun onPartialResults(partialResults: Bundle?) {
             val match = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -171,7 +222,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             }
             Log.e(TAG, "partialResults = $match")
         }
-
         override fun onResults(results: Bundle?) {
             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             Log.e(TAG, "results $matches")
@@ -182,7 +232,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 mainViewModel.setCommandText(command)
                 Handler(Looper.getMainLooper()).postDelayed({
                     if (executeCommand(command)) {
-                         stopListening()
+                        stopListening()
                     }else{
                         startListening()
                     }
@@ -192,13 +242,10 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         override fun onReadyForSpeech(params: Bundle?) {
             Log.d("SpeechRecognizer", "onReadyForSpeech to listen...")
         }
-
         override fun onBeginningOfSpeech() {
             Log.d("SpeechRecognizer", "onBeginningOfSpeech to listen...")
         }
-
         override fun onRmsChanged(rmsdB: Float) {}
-
         override fun onEvent(eventType: Int, params: Bundle?) {}
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
@@ -219,37 +266,8 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             Handler(Looper.getMainLooper()).postDelayed({ startListening() }, 1000)
         }
     }
-
-    private fun startListening() {
-        Handler(Looper.getMainLooper()).postDelayed({ speechRecognizer.startListening(recognizerIntent) }, 100)
-        // 오버레이
-        if (overlayView == null) {
-            overlayView = ComposeView(this).apply {
-                setViewTreeLifecycleOwner(this@AudioService)
-                setViewTreeSavedStateRegistryOwner(this@AudioService)
-                setContent {
-                    OverlayContent({ stopListening() }, mainViewModel)
-                }
-            }
-
-            val params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL  // 하단 중앙에 위치
-            }
-            windowManager.addView(overlayView, params)
-            lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-        }
-    }
-
     private fun executeCommand(command: String): Boolean {
         var executeCommand = true
-
         when {
             // 명령어 하드 코딩
             command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
@@ -258,7 +276,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 runBlocking{ //동기 처리
                     weatherInBrowser(UrlName.WEATHER)
                     playSoundFromAssets("weather.wav") // WAV 파일 재생
-                    delay(4500)
+                    delay(5000)
                 }
             command.contains("유튜브", ignoreCase = true) -> openApp(PackageName.YOUTUBE)
             command.contains("카카오톡", ignoreCase = true) -> openApp(PackageName.KAKAO)
@@ -285,24 +303,10 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             e.printStackTrace()
         }
     }
-
     private fun updateServiceState(isRunning: Boolean) {
         val intent = Intent("AUDIO_SERVICE_STATE_CHANGED")
         intent.putExtra("isRunning", isRunning)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-    }
-
-    private fun stopListening() {
-        val intent = Intent(this, AudioService::class.java)
-        speechRecognizer.destroy()
-        overlayView?.let {
-            windowManager.removeView(it)
-            overlayView = null
-        }
-        updateServiceState(false)
-        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
-        stopService(intent) // 서비스 종료 = 오버레이와 음성인식 종료
     }
     // 손전등 on off
     private fun toggleFlashlight(on: Boolean) {
@@ -310,13 +314,11 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             cameraManager.setTorchMode(id, on)
         }
     }
-
     private fun weatherInBrowser(url: String) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)  // 새로운 태스크로 실행하도록 플래그 추가
         startActivity(intent)
     }
-
     private fun openApp(packageName: String) {
         val intent = Intent(Intent.ACTION_MAIN)
         intent.setPackage(packageName)
