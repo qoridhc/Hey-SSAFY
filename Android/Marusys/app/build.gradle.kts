@@ -32,7 +32,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-//        kotlinCompilerExtensionVersion '1.3.2'
     }
     buildFeatures {
         compose = true
@@ -61,8 +60,8 @@ dependencies {
     implementation(libs.lifecycle.service)
     implementation(libs.ui.tooling.preview.android)
     implementation (libs.lifecycle.viewmodel.ktx)
-
     debugImplementation("androidx.compose.ui:ui-tooling")
+
     // 텐서플로 의존성
     implementation("org.tensorflow:tensorflow-lite:2.10.0")
     implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.10.0")
@@ -74,6 +73,9 @@ dependencies {
     implementation ("org.pytorch:pytorch_android_lite:1.12.1")
     implementation ("org.pytorch:pytorch_android_torchvision_lite:1.10.0")
 
+    // 자바 음성파일에서 pitch 추출
+    implementation("be.tarsos.dsp:core:2.5")
+
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
@@ -81,5 +83,4 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    implementation("be.tarsos.dsp:core:2.5")
 }

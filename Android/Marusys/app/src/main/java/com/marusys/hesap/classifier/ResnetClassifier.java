@@ -1,7 +1,8 @@
 package com.marusys.hesap.classifier;
 
-import static com.marusys.hesap.MainActivity.Constants.RECORDING_TIME;
-import static com.marusys.hesap.MainActivity.Constants.WINDOW_SIZE;
+
+import static com.marusys.hesap.service.AudioConstants.RECORDING_TIME;
+import static com.marusys.hesap.service.AudioConstants.WINDOW_SIZE;
 
 import android.content.Context;
 import android.util.Log;

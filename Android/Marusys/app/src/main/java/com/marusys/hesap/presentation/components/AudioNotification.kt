@@ -11,7 +11,7 @@ import com.marusys.hesap.MainActivity
 import com.marusys.hesap.R
 
 // 알림창
-class Notification(private val context: Context) {
+class AudioNotification(private val context: Context) {
     private val notificationManager: NotificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private lateinit var notificationBuilder: NotificationCompat.Builder
@@ -26,7 +26,10 @@ class Notification(private val context: Context) {
             CHANNEL_ID,
             "Audio Service",
             NotificationManager.IMPORTANCE_LOW
-        )
+        ).apply {
+            description = "음성 인식을 위한 서비스입니다"
+            setShowBadge(false)
+        }
         notificationManager.createNotificationChannel(channel)
     }
 
@@ -34,14 +37,14 @@ class Notification(private val context: Context) {
         val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).let { notificationIntent ->
             PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
         }
-
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("마르시스")
             .setContentText("음성 인식 대기 중...")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.marusys_icon)
             .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE) // 즉시 알림 표시
     }
-
     fun getNotification(): Notification = notificationBuilder.build()
 
     fun updateNotification(text: String) {
@@ -54,3 +57,4 @@ class Notification(private val context: Context) {
         const val NOTIFICATION_ID = 1
     }
 }
+
