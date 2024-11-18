@@ -48,23 +48,11 @@ fun SettingScreen(
             val currentCpuTime = Debug.threadCpuTimeNanos()
             val cpuUsageMs = (currentCpuTime - previousCpuTime) / 1_000_000  // 나노초 → 밀리초 변환
             cpuUsage = "$cpuUsageMs ms"
-//            cpuUsageList.add(cpuUsage) // 배열에 추가
-//            time++ // 시간 증가
 
             previousCpuTime = currentCpuTime  // 이전 시간 업데이트
 
             // 앱 메모리 사용량 계산
             appMemoryUsage = getAppMemoryUsage()
-//            memoryUsageList.add(appMemoryUsage) // 배열에 추가
-
-            // 로그 출력
-//            Log.d("AppUsageMonitor", "Time: ${time}s, CPU Usage: $cpuUsage, Memory Usage: $appMemoryUsage")
-
-
-//            if(time == 100) {
-//                logCollectedData()
-//                saveDataToDownloads(context)
-//            }
         }
     }
 
@@ -95,14 +83,6 @@ fun SettingScreen(
             title = "메모리 사용량",
             description = appMemoryUsage,  // 앱 메모리 사용량 표시
             imageRes = R.drawable.ic_memory // 메모리 관련 이미지
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PerformanceCard(
-            title = "배터리 사용량",
-            description = "추가 예정",  // 배터리 사용량 데이터 추가 예정
-            imageRes = R.drawable.ic_battery // 배터리 관련 이미지
         )
     }
 }
