@@ -36,13 +36,15 @@
 - 길이: 2초
 - 샘플레이트: 16000Hz
 
-### MainActivity
+### service/HotWordService.kt 
 ```kotlin
-   const val THRESHOLD = 0.95
+object AudioConstants {
+   const val THRESHOLD = 0.95   // 호출어 성공 여부 판단을 위한 임계값
    const val SAMPLE_RATE = 16000   // 샘플 레이트 16KHz (16000Hz)
    const val RECORDING_TIME = 2    // 녹음 시간 (2초)
    const val WINDOW_SIZE = SAMPLE_RATE * RECORDING_TIME  // 전체 window size
    const val STEP_SIZE = SAMPLE_RATE / 2     // sliding window 사이즈 (겹치는 구간)
+}
 ```
 변수들을 통해 다양한 녹음 관련 설정을 변경할 수 있습니다.
 
