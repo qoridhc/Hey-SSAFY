@@ -47,6 +47,11 @@
 ModelType 통해 새로운 AI 모델을 쉽게 추가하고 변경할 수 있습니다.
 
 ### CNN / RNN
+
+## 📘 Jupyter Notebook
+[View Notebook on nbviewer](https://lab.ssafy.com/s11-final/S11P31S207/-/blob/develop/AI/CNN/CNN_WordTrigger_3Conv_AddDropOut_Model.ipynb)
+
+
 #### AudioClassifier
 ```java
    private static final String MODEL_FILE = "CNN_or_RNN_Model.tflite";
