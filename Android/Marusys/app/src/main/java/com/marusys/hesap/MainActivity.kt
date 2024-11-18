@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
             }
         )
 
-        // 상태 관찰, 이걸 통해 관리해도 됨
+        // 상태 관찰, 상태 확인 용 코드
         lifecycleScope.launch {
             VoiceStateManager.voiceState.collect { state ->
                 when (state) {
@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
                     }
                     is VoiceRecognitionState.HotwordDetecting -> {
                         Log.e("","호출어 인식 상태")
-                        startAudioService()
+                        Handler(Looper.getMainLooper()).postDelayed({ startAudioService() }, 100)
 //                        mainViewModel.setAudioServiceRunning(true)
                     }
                     is VoiceRecognitionState.CommandListening -> {
