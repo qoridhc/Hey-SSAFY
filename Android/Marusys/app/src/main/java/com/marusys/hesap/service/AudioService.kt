@@ -39,6 +39,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 private val TAG = "AudioService"
 
@@ -118,8 +120,8 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             windowManager.removeView(it)
             overlayView = null
         }
-        serviceScope.cancel()
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        serviceScope.cancel()
         VoiceStateManager.updateState(VoiceRecognitionState.WaitingForHotword) // 키워드 대기상태
     }
 
@@ -172,11 +174,13 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             LocalBroadcastManager.getInstance(this@AudioService).sendBroadcast(intent)
             matches?.firstOrNull()?.let { command ->
                 mainViewModel.setCommandText(command)
-                if (executeCommand(command)) {
-                    Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 1000)
-                }else{
-                    startListening()
-                }
+                Handler(Looper.getMainLooper()).postDelayed({
+                    if (executeCommand(command)) {
+                         stopListening()
+                    }else{
+                        startListening()
+                    }
+                }, 500)
             }
         }
         override fun onReadyForSpeech(params: Bundle?) {
@@ -238,21 +242,23 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     }
 
     private fun executeCommand(command: String): Boolean {
-        var executeCommant = true
+        var executeCommand = true
 
         when {
             // 명령어 하드 코딩
             command.contains("손전등 켜", ignoreCase = true) -> toggleFlashlight(true)
             command.contains("손전등 꺼", ignoreCase = true) -> toggleFlashlight(false)
-            command.contains("날씨", ignoreCase = true) -> {
-                weatherInBrowser(UrlName.WEATHER)
-                playSoundFromAssets("weather.wav") // WAV 파일 재생
-            }
+            command.contains("날씨", ignoreCase = true) ->
+                runBlocking{ //동기 처리
+                    weatherInBrowser(UrlName.WEATHER)
+                    playSoundFromAssets("weather.wav") // WAV 파일 재생
+                    delay(4500)
+                }
             command.contains("유튜브", ignoreCase = true) -> openApp(PackageName.YOUTUBE)
             command.contains("카카오톡", ignoreCase = true) -> openApp(PackageName.KAKAO)
-            else -> executeCommant = false
+            else -> executeCommand = false
         }
-        return executeCommant
+        return executeCommand
     }
     private fun playSoundFromAssets(fileName: String) {
         try {
