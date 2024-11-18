@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat.getSystemService
 import com.marusys.hesap.MainActivity
 import com.marusys.hesap.R
 
@@ -35,14 +34,6 @@ class AudioNotification(private val context: Context) {
     }
 
     private fun createNotificationBuilder(): NotificationCompat.Builder {
-//        val pendingIntent = PendingIntent.getActivity(
-//            context,
-//            0,
-//            Intent(context, MainActivity::class.java).apply {
-//                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-//            },
-//            PendingIntent.FLAG_IMMUTABLE
-//        )
         val pendingIntent: PendingIntent = Intent(context, MainActivity::class.java).let { notificationIntent ->
             PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE)
         }
@@ -53,7 +44,6 @@ class AudioNotification(private val context: Context) {
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE) // 즉시 알림 표시
-//            .setPriority(NotificationCompat.PRIORITY_LOW) // 알림 우선순위 낮게 설정
     }
     fun getNotification(): Notification = notificationBuilder.build()
 

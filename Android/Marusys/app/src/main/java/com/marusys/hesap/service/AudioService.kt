@@ -1,8 +1,5 @@
 package com.marusys.hesap.service
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -23,7 +20,6 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.ui.platform.ComposeView
-import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -34,12 +30,9 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.marusys.hesap.AudioClassifier
-import com.marusys.hesap.R
-import com.marusys.hesap.feature.VoiceRecognitionEngine
 import com.marusys.hesap.feature.VoiceRecognitionState
 import com.marusys.hesap.feature.VoiceStateManager
 import com.marusys.hesap.presentation.components.AudioNotification
-import com.marusys.hesap.presentation.components.AudioNotification.Companion.NOTIFICATION_ID
 import com.marusys.hesap.presentation.components.OverlayContent
 import com.marusys.hesap.presentation.viewmodel.MainViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +53,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         const val WEATHER = "https://www.weather.go.kr/weather/special/special_03_final.jsp?sido=4700000000&gugun=4719000000&dong=4792032000"
     }
 
-
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val serviceScope = CoroutineScope(Dispatchers.Default + Job())
@@ -74,7 +66,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var recognizerIntent: Intent
     private lateinit var classifier: AudioClassifier  // AudioClassifier 인스턴스
-    private lateinit var voiceEngine: VoiceRecognitionEngine
     private val mainViewModel: MainViewModel by lazy {
         MainViewModel()
     }
@@ -147,10 +138,10 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
             // 반환할 최대 인식 결과 수, 가장 가능성 높은 거만
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            //  1초 정도 정적이 있으면 음성 인식을 완료됐을 가능성 있다고 판단
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 100)
             // 최소 밀리 세컨드 이상
 //            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 100)
-//             1초 정도 정적이 있으면 음성 인식을 완료됐을 가능성 있다고 판단
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 100)
             // 일리 세컨드 정도 완전한 침묵 = 입력 완
 //            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 100)
         }
@@ -284,9 +275,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         }
     }
 
-
-
-
     private fun updateServiceState(isRunning: Boolean) {
         val intent = Intent("AUDIO_SERVICE_STATE_CHANGED")
         intent.putExtra("isRunning", isRunning)
@@ -295,7 +283,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     private fun stopListening() {
         val intent = Intent(this, AudioService::class.java)
-//        speechRecognizer.stopListening()
         speechRecognizer.destroy()
         overlayView?.let {
             windowManager.removeView(it)

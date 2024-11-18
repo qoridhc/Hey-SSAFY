@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.asStateFlow
 sealed class VoiceRecognitionState {
     object WaitingForHotword : VoiceRecognitionState()
     object HotwordDetecting : VoiceRecognitionState()
-    object CommandListening : VoiceRecognitionState()
     data class Error(val message: String) : VoiceRecognitionState()
 }
 
@@ -18,19 +17,5 @@ object VoiceStateManager {
 
     fun updateState(newState: VoiceRecognitionState) {
         _voiceState.value = newState
-    }
-}
-
-// VoiceRecognitionEngine.kt
-interface VoiceRecognitionEngine {
-    fun startCommandRecognition()
-    fun stopRecognition()
-    fun destroy()
-
-    interface Callback {
-        fun onHotwordDetected()
-        fun onCommandRecognized(command: String)
-        fun onError(error: String)
-        fun onStateChanged(state: VoiceRecognitionState)
     }
 }
