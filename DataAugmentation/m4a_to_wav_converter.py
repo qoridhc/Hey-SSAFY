@@ -18,13 +18,18 @@ def convert_m4a_to_wav(input_folder, output_folder, duration_seconds=2, sample_r
     # 지정한 길이를 밀리초로 변환
     duration_ms = duration_seconds * 1000  # 2초를 밀리초로 변환
 
+    # 파일 번호 초기화
+    file_number = 1
+
     # 폴더 내의 모든 파일 확인
     for filename in os.listdir(input_folder):
         # m4a 파일만 선택
         if filename.endswith(".m4a"):
-            # 입력 및 출력 파일 경로 설정
+            # 입력 파일 경로 설정
             input_file = os.path.join(input_folder, filename)
-            output_file = os.path.join(output_folder, os.path.splitext(filename)[0] + ".wav")
+            
+            # 출력 파일 경로를 번호 기반으로 설정
+            output_file = os.path.join(output_folder, f"{file_number}.wav")
             
             # m4a 파일을 로드
             audio = AudioSegment.from_file(input_file, format="m4a")
@@ -41,10 +46,13 @@ def convert_m4a_to_wav(input_folder, output_folder, duration_seconds=2, sample_r
             # wav 형식으로 변환 후 저장
             audio.export(output_file, format="wav")
             print(f"{input_file} 파일이 {output_file}로 변환되었습니다.")
+            
+            # 파일 번호 증가
+            file_number += 1
 
 # 변환할 폴더 경로 설정
-input_folder = "tempFromM4a"  # 변환할 m4a 파일들이 있는 폴더 경로
-output_folder = "tempToWav"  # 저장할 wav 파일들을 저장할 폴더 경로
+input_folder = "false"  # 변환할 m4a 파일들이 있는 폴더 경로
+output_folder = "falseWav"  # 저장할 wav 파일들을 저장할 폴더 경로
 
 # 변환 실행
 convert_m4a_to_wav(input_folder, output_folder, duration_seconds=2, sample_rate=16000)
