@@ -50,7 +50,6 @@ class HotWordService : Service() {
     private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var audioNotification: AudioNotification
     private lateinit var classifier: AudioClassifier
-    private lateinit var audioIntent: Intent
 
     // 모델 타입
     enum class ModelType {
@@ -98,7 +97,7 @@ class HotWordService : Service() {
 
         // 서비스 재시작
         val restartServiceIntent = Intent(applicationContext, HotWordService::class.java)
-        startService(restartServiceIntent)
+        startForegroundService(restartServiceIntent)
     }
     override fun onBind(intent: Intent): IBinder? = null
 
