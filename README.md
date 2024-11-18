@@ -46,6 +46,62 @@
 ```
 ModelType 통해 새로운 AI 모델을 쉽게 추가하고 변경할 수 있습니다.
 
+### 데이터 증강
+
+
+## 오디오 변환 및 증강 도구
+M4A 형식의 오디오 파일을 WAV 형식으로 변환하고, 표준화(길이, 샘플레이트) 및 데이터 증강을 통해 다양한 오디오 샘플을 생성할 수 있는 Python 스크립트입니다.
+#
+
+## 주요 기능
+- **M4A → WAV 변환**
+  - 샘플레이트: 16,000 Hz로 고정.
+  - 파일 길이: 2초로 표준화 (초과 시 자르고, 부족 시 무음 추가).
+- **오디오 증강**
+  - 가우시안 노이즈, 속도 조절, 음정 조절, 볼륨 증감, 시간 이동, 배경 소음 추가.
+  - 확률적으로 적용하여 데이터 다양성 증대.
+#
+
+## 필요한 환경
+- **파이썬 라이브러리**
+  - `pydub`, `librosa`, `soundfile`, `audiomentations`
+  - 설치 명령어:
+    ```bash
+    pip install pydub librosa soundfile audiomentations
+    ```
+
+- **FFmpeg 설치**
+  - M4A 파일 처리를 위해 필요. [FFmpeg 다운로드](https://ffmpeg.org/download.html) 후 시스템 환경 변수에 추가.
+#
+
+## 사용법
+1. **스크립트 실행**  
+   변환 및 증강 작업 수행:
+   ```bash
+   python augment_wav_files.py
+2. **결과 확인**
+변환된 파일: output/converted_files/
+증강된 파일: output/augmented_files/
+#
+
+## 폴더구조
+### 실행전
+```plaintext
+project/
+├── m4a_files/
+│   ├── file1.m4a
+│   ├── file2.m4a
+```
+### 실행후
+```
+project/
+├── output/
+│   ├── converted_files/
+│   │   ├── file1.wav
+│   ├── augmented_files/
+│       ├── aug_file1_1.wav
+```
+
 ### CNN / RNN
 
 ## 📘 Jupyter Notebook
@@ -87,4 +143,3 @@ Asset 폴더에 삽입한 AI 모델을 변환한 PyTorch Script 파일을 불러
 
 - **mel_spectogram_model** : 음성 데이터를 **MelSpectogram**으로 변환
 - **resnet_model** : Resnet 학습 모델
-
