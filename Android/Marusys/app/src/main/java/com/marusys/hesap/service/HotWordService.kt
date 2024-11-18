@@ -104,7 +104,7 @@ class HotWordService : Service() {
     private fun sendResultUpdate(result: String) {
         val intent = Intent("RESULT_UPDATE")
         intent.putExtra("result", result)
-        Log.e(TAG, "결과  $result")
+        Log.d(TAG, "$result")
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 

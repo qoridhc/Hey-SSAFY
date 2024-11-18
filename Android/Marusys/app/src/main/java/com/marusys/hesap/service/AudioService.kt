@@ -8,6 +8,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -127,6 +128,10 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     // 음성녹음 초기화
     private fun initializeSpeechRecognizer() {
+        // 온디바이스 음성 인식 가능 여부 확인
+        val isOnDeviceRecognitionAvailable = SpeechRecognizer.isOnDeviceRecognitionAvailable(this)
+        Log.d(TAG, "온디바이스 음성 인식 가능 여부: $isOnDeviceRecognitionAvailable")
+
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer.setRecognitionListener(recognitionListener)
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -141,6 +146,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             //  1초 정도 정적이 있으면 음성 인식을 완료됐을 가능성 있다고 판단
             putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 100)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             // 최소 밀리 세컨드 이상
 //            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 100)
             // 일리 세컨드 정도 완전한 침묵 = 입력 완
