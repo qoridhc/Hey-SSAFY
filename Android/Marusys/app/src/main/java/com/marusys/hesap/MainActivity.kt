@@ -8,8 +8,6 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -66,8 +64,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // 오디오 녹음 권한이 있는지 확인
         checkAndRequestPermissions()
+
         // 오버레이 권한 체크 및 요청
         checkOverlayPermission()
+
         // BroadcastReceiver 등록
         LocalBroadcastManager.getInstance(this).registerReceiver(
             receiver,
@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
             }
         )
 
-        // 상태 관찰, 상태 확인 용 코드
+        // 상태 관찰
         lifecycleScope.launch {
             VoiceStateManager.voiceState.collect { state ->
                 when (state) {
@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
                     }
                     is VoiceRecognitionState.HotwordDetecting -> {
                         Log.e("","호출어 인식 상태")
-                        Handler(Looper.getMainLooper()).postDelayed({ startAudioService() }, 200)
+                        startAudioService()
                     }
                     else -> {
                         // 다른 상태 처리
@@ -96,6 +96,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
         setContent {
             Surface(modifier = Modifier.fillMaxSize() ) {
                 AudioScreen(
@@ -104,7 +105,9 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
+    /*
+     *  각종 권한 체크 함수
+     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -137,8 +140,10 @@ class MainActivity : ComponentActivity() {
     }
     private fun checkOverlayPermission() {
         if (!Settings.canDrawOverlays(this)) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName"))
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
             startActivityForResult(intent, OVERLAY_PERMISSION_REQUEST_CODE)
         }
     }
@@ -150,6 +155,7 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
     }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == OVERLAY_PERMISSION_REQUEST_CODE) {
@@ -171,11 +177,7 @@ class MainActivity : ComponentActivity() {
     }
     // 로출어 인식 -> 서비스 시작
     private fun startAudioService() {
-        val bundle = Bundle()
-//        bundle.putString("commandText", mainViewModel.commandText.value)
-//        bundle.putBoolean("isAudioServiceRunning", true)
         audioRecognitionServiceIntent = Intent(this, AudioService::class.java)
-        audioRecognitionServiceIntent.putExtra("viewModelState", bundle)
         startService(audioRecognitionServiceIntent)
     }
 

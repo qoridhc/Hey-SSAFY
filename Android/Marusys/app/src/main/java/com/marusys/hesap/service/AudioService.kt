@@ -29,7 +29,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.marusys.hesap.AudioClassifier
+import com.marusys.hesap.classifier.AudioClassifier
 import com.marusys.hesap.feature.VoiceRecognitionState
 import com.marusys.hesap.feature.VoiceStateManager
 import com.marusys.hesap.presentation.components.AudioNotification
@@ -84,7 +84,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onCreate() {
         super.onCreate()
         Log.e(TAG, "오디오 서비스 시작")
-        playSoundFromAssets("ne.wav") // WAV 파일 재생
+        playSoundFromAssets("ne.wav") // WAV 파일 재생\
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
 
@@ -100,7 +100,6 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         updateServiceState(true)
         // 10초 있다가 종료
         Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 10000) // 디자인 작업 이후 주석 해제
-        VoiceStateManager.updateState(VoiceRecognitionState.HotwordDetecting)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -167,18 +166,18 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
         override fun onResults(results: Bundle?) {
             val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            matches?.firstOrNull()?.let { command ->
-                if (command.startsWith("네"))
-                mainViewModel.setCommandText(command)
-                if (executeCommand(command)) {
-                    stopListening()
-                }
-            }
             Log.e(TAG, "results $matches")
             val intent = Intent("SPEECH_RECOGNITION_RESULT")
             intent.putStringArrayListExtra("matches", matches)
             LocalBroadcastManager.getInstance(this@AudioService).sendBroadcast(intent)
-            startListening()
+            matches?.firstOrNull()?.let { command ->
+                mainViewModel.setCommandText(command)
+                if (executeCommand(command)) {
+                    Handler(Looper.getMainLooper()).postDelayed({ stopListening() }, 1000)
+                }else{
+                    startListening()
+                }
+            }
         }
         override fun onReadyForSpeech(params: Bundle?) {
             Log.d("SpeechRecognizer", "onReadyForSpeech to listen...")
@@ -212,7 +211,7 @@ class AudioService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     }
 
     private fun startListening() {
-        speechRecognizer.startListening(recognizerIntent)
+        Handler(Looper.getMainLooper()).postDelayed({ speechRecognizer.startListening(recognizerIntent) }, 100)
         // 오버레이
         if (overlayView == null) {
             overlayView = ComposeView(this).apply {

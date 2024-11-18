@@ -1,4 +1,4 @@
-package com.marusys.hesap;
+package com.marusys.hesap.classifier;
 
 
 import static com.marusys.hesap.service.AudioConstants.RECORDING_TIME;
@@ -19,7 +19,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class ResnetClassifier {
+public class ResnetClassifier extends BaseAudioClassifier {
 
     private final String[] labels = {
             "_silence_",
@@ -50,13 +50,15 @@ public class ResnetClassifier {
 
     public ResnetClassifier(Context context) throws IOException {
         // 모델 파일을 로드합니다.
+        super(context);
         this.context = context;
 
         resnetModel = LiteModuleLoader.load(assetFilePath(context, RESNET_MODEL_PATH));
         melModel = LiteModuleLoader.load(assetFilePath(context, MEL_MODEL_PATH));
     }
 
-    public float[] classifyAudio(float[] audioData) {
+    @Override
+    public float[] classify(float[] audioData) {
         try {
 
             // 1. 오디오 데이터 적합한 입력 텐서 형태로로 변환
@@ -73,7 +75,7 @@ public class ResnetClassifier {
             Tensor reshapedMelTensor = Tensor.fromBlob(melSpecData, new long[]{1L, 1L, INPUT_HEIGHT, INPUT_WIDTH});
 
             // IValue를 Tensor로 변환하고, shape를 확인하는 예제
-            Tensor tensor = IValue.from(reshapedMelTensor).toTensor();
+//            Tensor tensor = IValue.from(reshapedMelTensor).toTensor();
 
             // 4. BCResNet으로 분류
             Tensor outputTensor = resnetModel.forward(IValue.from(reshapedMelTensor)).toTensor();
@@ -146,7 +148,10 @@ public class ResnetClassifier {
         buffer.rewind(); // 버퍼 위치를 처음으로 이동
         int floatCount = buffer.remaining() / Float.BYTES;
         float[] floatArray = new float[floatCount];
-        buffer.asFloatBuffer().get(floatArray); // FloatBuffer로 변환 후 float[]로 가져오기
+
+        // FloatBuffer로 변환 후 float[]로 가져오기
+        buffer.asFloatBuffer().get(floatArray);
+
         return floatArray;
     }
 
@@ -155,7 +160,7 @@ public class ResnetClassifier {
         try {
             ByteBuffer audioDataBuffer = readWavFile(assetFilePath);
             float[] audioBuffer = byteBufferToFloatArray(audioDataBuffer);
-            return classifyAudio(audioBuffer);
+            return classify(audioBuffer);
         } catch (IOException e) {
             Log.e("ResnetClassifier", "Error reading file for classification", e);
             return null;
