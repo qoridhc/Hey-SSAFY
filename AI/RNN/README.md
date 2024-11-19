@@ -15,7 +15,7 @@
 
 - 시간-주파수 도메인으로 변환하면 **시간에 따른 주파수 구성의 변화**를 시각화할 수 있어 호출어 인식 학습에 매우 효과적입니다.
 
----
+
 
 ## RNN 기반 음성 인식
 
@@ -29,7 +29,7 @@ RNN 모델은 현재 상태가 이전 상태에 영향을 받아 순차적 특�
 
 
 
----
+
 
 ## GRU Model 구현
 
@@ -58,7 +58,7 @@ RNN 모델은 현재 상태가 이전 상태에 영향을 받아 순차적 특�
 
 2. DataSet
 
-Original Data Set("Hey SSAFY") + Data Argumentation (about 3000 wav files)
+Original Data Set("Hey SSAFY") + Data Argumentation using Python Lib (about 3000 wav files)
 
 3. Accuracy
 
@@ -66,10 +66,19 @@ Original Data Set("Hey SSAFY") + Data Argumentation (about 3000 wav files)
 
 
 
----
+
 
 ## TF Lite 변환
 
 - TensorFlow Lite는 경량화와 성능 최적화를 위해 제한된 연산집합만 지원
+- Flex delegate를 통해 STFT, 사용자 정의 연산 (Custom Ops), RNN 관련 연산, 고급 연산과 사용자 정의 레이어가 포함된 모델도 변환 가능
 
-- Flex delegate를 통해** STFT, 사용자 정의 연산 (Custom Ops), RNN 관련 연산, 고급 연산과 사용자 정의 레이어가 포함된 모델도 변환 가능
+```python
+# TFLite 변환기 설정
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+converter.target_spec.supported_ops = [
+    tf.lite.OpsSet.TFLITE_BUILTINS, 
+    tf.lite.OpsSet.SELECT_TF_OPS  # Flex delegate 사용
+]
+```
+
