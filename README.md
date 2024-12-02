@@ -24,7 +24,7 @@
    - 실시간 처리가 가능한 최적화된 구조로, 모바일 환경에서 원활하게 동작하도록 구현
 
 <div align="center">
-    <img src="/uploads/f8669126fdb1499810b9408b71a6d5f9/mockup.png" alt="mockup">
+    <img src="https://github.com/user-attachments/assets/14d98306-b341-443c-b7fb-d9638207d866">
 </div>
 
 ## 🛠 시작하기
