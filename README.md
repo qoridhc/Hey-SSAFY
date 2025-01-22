@@ -127,7 +127,7 @@ asset 폴더에 tflite로 변환한 CNN / RNN 모델 경로를 명시해줍니�
 
 아래 예제를 통해 CNN 모델을 통해 AI 모델을 학습시키고 tflite로 변환할 수 있습니다.
 
-[CNN 학습 및 tflite 변환 예제](https://lab.ssafy.com/s11-final/S11P31S207/-/blob/develop/AI/CNN/README.md?ref_type=heads)
+[CNN 학습 및 tflite 변환 예제](https://github.com/qoridhc/Hey-SSAFY/blob/main/AI/CNN/README.md)
 
 
 ### Resnet
@@ -162,5 +162,5 @@ Asset 폴더에 삽입한 AI 모델을 변환한 PyTorch Script 파일을 불러
 
 아래 예제를 통해 RESNET 모델을 통해 AI 모델을 학습시키고 pytorch로 변환할 수 있습니다.
 
-[RESNET 학습 및 PyTorch 변환 예제](https://lab.ssafy.com/s11-final/S11P31S207/-/tree/develop/AI/bcresnet-main?ref_type=heads)
+[RESNET 학습 및 PyTorch 변환 예제](https://github.com/qoridhc/Hey-SSAFY/blob/main/AI/bcresnet-main/README.md)
 
