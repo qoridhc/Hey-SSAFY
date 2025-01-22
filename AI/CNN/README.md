@@ -134,6 +134,6 @@ model = models.Sequential([
 ```
 
 ## 📘 Jupyter Notebook
-[CNN Word Trigger Model](https://lab.ssafy.com/s11-final/S11P31S207/-/blob/develop/AI/CNN/CNN_WordTrigger_3Conv_AddDropOut_Model.ipynb?ref_type=heads)
+[CNN Word Trigger Model](https://github.com/qoridhc/Hey-SSAFY/blob/main/AI/CNN/CNN_WordTrigger_3Conv_AddDropOut_Model.ipynb)
 
 
